@@ -88,6 +88,135 @@ async def process_admin_create(sender_psid: str, text: str):
         
     except Exception as e:
         await messenger_api.send_text(sender_psid, f"❌ Cloner Failed: {e}")
+        # (Append this to admin/operations.py below the admin_create functions)
+import asyncio
+
+# --- VIEW JOBS ---
+async def handle_view_jobs(sender_psid: str):
+    jobs = await db.get_creation_jobs()
+    if not jobs:
+        return await messenger_api.send_text(sender_psid, "No account creation jobs found.")
+        
+    response = "--- Recent Cloner Jobs ---\n\n"
+    for job in jobs:
+        emoji = {'pending': '⏳', 'processing': '⚙️', 'completed': '✅', 'failed': '❌', 'delivered': '🎉'}.get(job['status'], '❓')
+        response += f"{emoji} Job ID: {job['job_id']}\n"
+        response += f"   User: {job['user_psid']}\n"
+        response += f"   Status: {job['status']}\n"
+        if job['result_message']:
+            response += f"   Result: {job['result_message'][:100]}...\n"
+        response += "\n"
+        
+    await messenger_api.send_text(sender_psid, response)
+
+# --- REPLY TO USER ---
+async def prompt_reply_psid(sender_psid: str):
+    await messenger_api.send_text(sender_psid, "Enter the PSID of the user you want to reply to:")
+    state_manager.set_user_state(sender_psid, 'awaiting_reply_psid')
+
+async def prompt_reply_username(sender_psid: str, text: str):
+    target = text.strip()
+    await messenger_api.send_text(sender_psid, f"✅ Target: {target}. Now enter the USERNAME/EMAIL.")
+    state_manager.set_user_state(sender_psid, 'awaiting_reply_username', target_psid=target)
+
+async def prompt_reply_password(sender_psid: str, text: str):
+    state = state_manager.get_user_state(sender_psid)
+    username = text.strip()
+    await messenger_api.send_text(sender_psid, "✅ Now enter the PASSWORD.")
+    state_manager.set_user_state(sender_psid, 'awaiting_reply_password', target_psid=state['target_psid'], username=username)
+
+async def process_reply_send(sender_psid: str, text: str):
+    state = state_manager.get_user_state(sender_psid)
+    password = text.strip()
+    
+    msg = f"🎉 Here are your account details!\n\n📧 Username: `{state['username']}`\n🔐 Password: `{password}`\n\nThank you for your trust! Enjoy! 💙"
+    
+    try:
+        await messenger_api.send_text(state['target_psid'], msg)
+        await messenger_api.send_text(sender_psid, "✅ Message sent to user successfully.")
+    except Exception as e:
+        await messenger_api.send_text(sender_psid, f"❌ Failed to send: {e}")
+    finally:
+        state_manager.clear_user_state(sender_psid)
+
+# --- PAUSE/RESUME USER ---
+async def prompt_pause_toggle(sender_psid: str):
+    await messenger_api.send_text(sender_psid, "Enter the PSID of the user to pause/resume.")
+    state_manager.set_user_state(sender_psid, 'awaiting_pause_toggle_psid')
+
+async def process_pause_toggle(sender_psid: str, text: str):
+    target = text.strip()
+    is_paused = await db.is_user_paused(target)
+    if is_paused:
+        await db.resume_user(target)
+        await messenger_api.send_text(sender_psid, f"✅ User {target} RESUMED. Bot will now respond.")
+    else:
+        await db.pause_user(target)
+        await messenger_api.send_text(sender_psid, f"✅ User {target} PAUSED. Bot will ignore them.")
+    state_manager.clear_user_state(sender_psid)
+
+# --- BROADCAST ---
+async def prompt_broadcast(sender_psid: str):
+    await messenger_api.send_text(sender_psid, "📢 Type the message you want to broadcast (Type 'Menu' to cancel):")
+    state_manager.set_user_state(sender_psid, 'awaiting_broadcast_message')
+
+async def process_broadcast_confirm(sender_psid: str, text: str):
+    msg = text.strip()
+    count = len(await db.get_all_user_psids())
+    await messenger_api.send_text(sender_psid, f"This will send to ~{count} users:\n---\n{msg}\n---\nReply 'CONFIRM' to proceed.")
+    state_manager.set_user_state(sender_psid, 'awaiting_broadcast_confirmation', message=msg)
+
+async def process_broadcast_execute(sender_psid: str, text: str):
+    if text.strip().upper() != 'CONFIRM':
+        state_manager.clear_user_state(sender_psid)
+        return await messenger_api.send_text(sender_psid, "❌ Broadcast cancelled.")
+        
+    state = state_manager.get_user_state(sender_psid)
+    msg = state['message']
+    state_manager.clear_user_state(sender_psid)
+    
+    await messenger_api.send_text(sender_psid, "🚀 Starting broadcast. You will be notified when complete.")
+    psids = await db.get_all_user_psids()
+    
+    success, error = 0, 0
+    for psid in psids:
+        try:
+            await messenger_api.send_text(psid, msg)
+            success += 1
+        except Exception:
+            error += 1
+        await asyncio.sleep(0.1) # Avoid rate limits
+        
+    await messenger_api.send_text(sender_psid, f"✅ Broadcast complete!\nSuccess: {success}\nFailed: {error}")
+
+# --- SALES STATS ---
+async def prompt_sales_stats(sender_psid: str):
+    await messenger_api.send_text(sender_psid, "Choose period:\n1. Daily\n2. Weekly\n3. Monthly")
+    state_manager.set_user_state(sender_psid, 'awaiting_sales_stats_period')
+
+async def process_sales_stats(sender_psid: str, text: str):
+    period_map = {'1': 'daily', 'daily': 'daily', '2': 'weekly', 'weekly': 'weekly', '3': 'monthly', 'monthly': 'monthly'}
+    period = period_map.get(text.strip())
+    
+    if not period:
+        return await messenger_api.send_text(sender_psid, "Invalid choice. Type 1, 2, or 3.")
+        
+    try:
+        stats = await db.get_sales_statistics(period)
+        if not stats:
+            await messenger_api.send_text(sender_psid, f"No sales data found for the {period} period.")
+        else:
+            total = 0.0
+            response = f"📊 --- {period.capitalize()} Sales Report ---\n\n"
+            for stat in stats:
+                total += stat['total_revenue']
+                response += f"Mod: {stat['name']}\n  - Sales: {stat['sales_count']}\n  - Revenue: ₱{stat['total_revenue']:,.2f}\n\n"
+            response += f"--- Total Revenue: ₱{total:,.2f} ---"
+            await messenger_api.send_text(sender_psid, response)
+    except Exception as e:
+        await messenger_api.send_text(sender_psid, f"❌ Error: {e}")
+    finally:
+        state_manager.clear_user_state(sender_psid)
 
 # (The rest of the standard utility functions like Broadcast, Reply to User, View Jobs, etc. go here)
 # ... I will provide `ref_manager.py` and the remaining operations next if you confirm this structure works!
