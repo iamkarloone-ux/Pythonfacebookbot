@@ -5,7 +5,7 @@ import language_manager as lang
 import user.manual as manual
 import secrets
 from user.tasks import process_account_creation
-from config import ADMIN_ID
+from config import ADMIN_ID # Global Admin ID import
 
 def generate_password(length=10):
     """Generates a secure random password."""
@@ -66,9 +66,9 @@ async def handle_email_for_purchase(sender_psid: str, text: str, user_lang: str 
     await messenger_api.send_quick_replies(sender_psid, payment_message, replies)
     state_manager.set_user_state(sender_psid, 'awaiting_receipt_for_purchase', modId=mod_id, email=email, lang=user_lang)
 
-async def handle_receipt_analysis(sender_psid: str, analysis: dict, ADMIN_ID: str, user_lang: str = 'en'):
+# CORRECTED SIGNATURE: Aligned perfectly with user/router.py
+async def handle_receipt_analysis(sender_psid: str, analysis: dict, user_lang: str, image_url: str):
     state = state_manager.get_user_state(sender_psid) or {}
-    image_url = state.get('image_url', '') # Safe extraction of URL
     
     amount_str = str(analysis.get("extracted_info", {}).get("amount", "")).replace(',', '')
     ref_number = str(analysis.get("extracted_info", {}).get("reference_number", "")).strip()
@@ -125,7 +125,7 @@ async def handle_receipt_analysis(sender_psid: str, analysis: dict, ADMIN_ID: st
         await messenger_api.send_text(ADMIN_ID, f"User {user_name} paid {amount} PHP, but no mod matches. Ref: {ref_number}")
         state_manager.set_user_state(sender_psid, 'language_set', lang=user_lang)
 
-async def handle_mod_confirmation(sender_psid: str, text: str, ADMIN_ID: str, user_lang: str = 'en'):
+async def handle_mod_confirmation(sender_psid: str, text: str, user_lang: str = 'en'):
     state = state_manager.get_user_state(sender_psid)
     positive_confirmation = lang.get_text('confirm_yes', user_lang).lower()
     
@@ -159,7 +159,7 @@ async def handle_mod_confirmation(sender_psid: str, text: str, ADMIN_ID: str, us
     state_manager.clear_user_state(sender_psid)
     state_manager.set_user_state(sender_psid, 'language_set', lang=user_lang)
 
-async def handle_mod_clarification(sender_psid: str, text: str, ADMIN_ID: str, user_lang: str = 'en'):
+async def handle_mod_clarification(sender_psid: str, text: str, user_lang: str = 'en'):
     state = state_manager.get_user_state(sender_psid)
     try:
         mod_id = int(text.strip())
