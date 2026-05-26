@@ -46,6 +46,7 @@ async def handle_admin_message(sender_psid: str, lower_text: str, received_text:
         elif state == 'awaiting_bulk_refs_list': return await ref_manager.process_bulk_refs_save(sender_psid, received_text)
         elif state == 'awaiting_edit_claims_ref': return await ref_manager.prompt_edit_claims_values(sender_psid, received_text)
         elif state == 'awaiting_edit_claims_values': return await ref_manager.process_edit_claims_update(sender_psid, received_text)
+        elif state == 'awaiting_edit_admin': return await operations.process_edit_admin(sender_psid, received_text)
         
         return # Do nothing if state doesn't match
 
@@ -54,6 +55,7 @@ async def handle_admin_message(sender_psid: str, lower_text: str, received_text:
         '1': lambda: ref_manager.handle_view_references(sender_psid, 1),
         '3': lambda: mod_manager.prompt_edit_mod(sender_psid),
         '4': lambda: ref_manager.prompt_add_ref(sender_psid),
+        '5': lambda: operations.prompt_edit_admin(sender_psid),
         '6': lambda: ref_manager.prompt_edit_ref(sender_psid),
         '7': lambda: mod_manager.prompt_add_mod(sender_psid),
         '8': lambda: ref_manager.prompt_delete_ref(sender_psid),
