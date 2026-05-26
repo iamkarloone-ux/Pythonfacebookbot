@@ -217,6 +217,33 @@ async def process_sales_stats(sender_psid: str, text: str):
         await messenger_api.send_text(sender_psid, f"❌ Error: {e}")
     finally:
         state_manager.clear_user_state(sender_psid)
+        # --- EDIT ADMIN INFO (GCASH/ID) ---
+async def prompt_edit_admin(sender_psid: str):
+    msg = "Provide new admin info.\nFormat: Facebook ID: [New ID], GCash Number: [New Number]"
+    await messenger_api.send_text(sender_psid, msg)
+    state_manager.set_user_state(sender_psid, 'awaiting_edit_admin')
+
+async def process_edit_admin(sender_psid: str, text: str):
+    try:
+        parts = [p.strip() for p in text.split(',')]
+        new_id = None
+        new_gcash = None
+        
+        for p in parts:
+            if p.lower().startswith('facebook id:'):
+                new_id = p.split(':')[1].strip()
+            elif p.lower().startswith('gcash number:'):
+                new_gcash = p.split(':')[1].strip()
+                
+        if not new_id or not new_gcash:
+            raise ValueError("Missing details. Please ensure you include both.")
+            
+        await db.update_admin_info(new_id, new_gcash)
+        await messenger_api.send_text(sender_psid, "✅ Admin info updated successfully.")
+    except Exception as e:
+        await messenger_api.send_text(sender_psid, f"❌ Invalid format. Error: {e}")
+    finally:
+        state_manager.clear_user_state(sender_psid)
 
 # (The rest of the standard utility functions like Broadcast, Reply to User, View Jobs, etc. go here)
 # ... I will provide `ref_manager.py` and the remaining operations next if you confirm this structure works!
