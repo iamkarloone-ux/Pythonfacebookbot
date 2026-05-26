@@ -1,7 +1,9 @@
+# user/router.py
 import state_manager
 import messenger_api
 import database as db
 import payment_verifier
+import language_manager as lang  # <-- CRITICAL MISSING IMPORT FIXED HERE
 from config import ADMIN_ID
 
 from user import menu, purchase, account, support, custom, manual
@@ -44,6 +46,8 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
     if attachments and attachments[0].get("type") == "image":
         if not message.get("sticker_id") and state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod']:
             image_url = attachments[0]["payload"]["url"]
+            
+            # This line was crashing because 'lang' was not imported!
             await messenger_api.send_text(sender_psid, lang.get_text('receipt_analyzing', user_lang))
             
             if state == 'awaiting_receipt_for_custom_mod':
