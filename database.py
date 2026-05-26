@@ -10,11 +10,16 @@ async def init_db():
         print("FATAL ERROR: DATABASE_URL is not found in config.py!")
         sys.exit(1)
         
-    pool = await asyncpg.create_pool(dsn=DATABASE_URL, ssl="require")
+    pool = await asyncpg.create_pool(
+        dsn=DATABASE_URL, 
+        ssl="require",
+        statement_cache_size=0 # Disables statement caching for PgBouncer compatibility
+    )
     
     async with pool.acquire() as conn:
         print("Synchronizing Database Schema...")
         async with conn.transaction():
+            # ... (Rest of the schema table creations)
             # 1. Core Tables
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS admins (
