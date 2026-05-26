@@ -33,9 +33,16 @@ async def get_profile(client, email, pwd, dev, carx="", is_target=False):
     r = await client.post(f"{BASE_AUTH}/login", json=payload)
     
     if r.status_code != 200 and is_target:
+        # Register the brand new target account
         reg_r = await client.post(f"{BASE_AUTH}/register", json=payload)
+        
         if reg_r.status_code != 200:
-            raise Exception(f"CarX Registration Failed ({reg_r.status_code}): {reg_r.text}")
+            raise Exception(f"CarX Registration Failed: {reg_r.text}")
+            
+        reg_data = reg_r.json()
+        if isinstance(reg_data, dict) and "e" in reg_data:
+            err_msg = reg_data["e"].get("message", "Unknown Registration Error")
+            raise Exception(f"CarX Registration Rejected: {err_msg}")
             
         await client.post(f"{BASE_AUTH}/verify", json={"code": "g4a369"})
         r = await client.post(f"{BASE_AUTH}/login", json=payload)
@@ -55,8 +62,6 @@ async def get_profile(client, email, pwd, dev, carx="", is_target=False):
         carx = str(data.get("d", {}).get("userId") or data.get("userId") or "")
         
     h = {"Authorization": f"Bearer {token}", "x-token": token, "X-CarX-Id": carx, "X-Device-Id": dev}
-    
-    # CORRECTED: Passing the headers=h here is required to validate the session token on CarX
     await client.post(f"{BASE_AUTH}/verify", json={"code": "g4a369"}, headers=h)
     
     r_profiles = await client.get(f"{BASE_SYNC}/profiles", headers=h)
@@ -78,7 +83,8 @@ async def execute_clone_from_snapshot(profile_url: str, tgt_email: str, tgt_pass
     async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
         client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
         
-        # 1. Download snapshot JSON from Supabase Storage
+        # 1. Download decrypted snapshot JSON from Supabase Storage
+        print(f"[Snapshot Cloner] Downloading snapshot: {profile_url}")
         r_snap = await client.get(profile_url)
         if r_snap.status_code != 200:
             raise Exception(f"Failed to download snapshot profile from storage: {r_snap.text}")
@@ -89,6 +95,7 @@ async def execute_clone_from_snapshot(profile_url: str, tgt_email: str, tgt_pass
             raise Exception("Downloaded snapshot is not a valid JSON file. Please check your Supabase Storage file.")
 
         # 2. Fetch Target baseline profile
+        print(f"[Snapshot Cloner] Fetching target baseline for {tgt_email}...")
         cont_b, h_b = await get_profile(client, tgt_email, tgt_pass, tgt_dev, carx="", is_target=True)
         prof_b = decrypt_payload(cont_b["compressed_data"])
 
@@ -98,6 +105,7 @@ async def execute_clone_from_snapshot(profile_url: str, tgt_email: str, tgt_pass
         prof_b.update(identity)
         
         # 4. Upload back to Target
+        print(f"[Snapshot Cloner] Uploading cloned profile to {tgt_email}...")
         cont_b["compressed_data"] = encrypt_payload_strict(prof_b)
         cont_b["lastSyncTime"] = int(time.time())
         
@@ -105,11 +113,12 @@ async def execute_clone_from_snapshot(profile_url: str, tgt_email: str, tgt_pass
         if r_up.status_code != 200:
             raise Exception(f"Upload failed: {r_up.text}")
             
+        print(f"[Snapshot Cloner] Successfully cloned to {tgt_email}!")
         return True
 
 
-# --- DYNAMIC CLONE (OLD FLOW KEEP AS FALLBACK) ---
-async def execute_clone(src_email, src_pass, src_dev, src_carx, tgt_email, tgt_pass):
+# --- DYNAMIC CLONE (FALLBACK FLOW) ---
+async def execute_clone_dynamic(src_email, src_pass, src_dev, src_carx, tgt_email, tgt_pass):
     tgt_dev = uuid.uuid4().hex
     async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
         client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
@@ -131,3 +140,17 @@ async def execute_clone(src_email, src_pass, src_dev, src_carx, tgt_email, tgt_p
             raise Exception(f"Upload failed: {r_up.text}")
             
         return True
+
+
+# --- UNIFIED ENTRY POINT ---
+async def execute_clone(src_email, src_pass, src_dev, src_carx, tgt_email, tgt_pass):
+    """
+    Unified entry point. Automatically routes cloning to snapshot or dynamic path
+    depending on whether src_email is a Supabase Storage URL.
+    """
+    if src_email and (src_email.startswith("http://") or src_email.startswith("https://")):
+        # Profile is already decrypted and stored as a JSON on Supabase
+        return await execute_clone_from_snapshot(src_email, tgt_email, tgt_pass)
+    else:
+        # Standard dynamic account-to-account cloning
+        return await execute_clone_dynamic(src_email, src_pass, src_dev, src_carx, tgt_email, tgt_pass)
