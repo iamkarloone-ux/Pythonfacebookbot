@@ -55,7 +55,9 @@ async def get_profile(client, email, pwd, dev, carx="", is_target=False):
         carx = str(data.get("d", {}).get("userId") or data.get("userId") or "")
         
     h = {"Authorization": f"Bearer {token}", "x-token": token, "X-CarX-Id": carx, "X-Device-Id": dev}
-    await client.post(f"{BASE_AUTH}/verify", json={"code": "g4a369"})
+    
+    # CORRECTED: Passing the headers=h here is required to validate the session token on CarX
+    await client.post(f"{BASE_AUTH}/verify", json={"code": "g4a369"}, headers=h)
     
     r_profiles = await client.get(f"{BASE_SYNC}/profiles", headers=h)
     if r_profiles.status_code != 200:
