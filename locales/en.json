@@ -1,0 +1,93 @@
+{
+  "welcome_message": "🌟 Welcome to KARLOWORKS ModShop! 🌟\nWe're thrilled to help you unlock your gaming experience!\nPlease choose an option:",
+  "menu_option_1": "🔢 1️⃣  View available mods",
+  "menu_option_2": "✅ 2️⃣  Check remaining replacement accounts",
+  "menu_option_3": "🔁 3️⃣  Request a replacement account",
+  "menu_option_4": "💰 4️⃣  Custom Gold/Money",
+  "menu_option_5": "📩 5️⃣  Contact the admin",
+  "menu_option_6": "🧾 6️⃣ View Proofs of Legitimacy",
+  "menu_option_7": "🚨 7️⃣ Report an account issue",
+  "menu_suffix": "Just type the number of your choice! 😊",
+
+  "menu_option_1_button": "View Mods",
+  "menu_option_2_button": "Check Claims",
+  "menu_option_3_button": "Get Replacement",
+  "menu_option_4_button": "Custom Order",
+  "menu_option_5_button": "Contact Admin",
+  "menu_option_6_button": "View Proofs",
+  "menu_option_7_button": "Report Issue",
+
+  "admin_online": "The admin is currently online! 🟢\n\nYou can message them directly for assistance at:\nhttps://www.facebook.com/share/19Z1AuEuGN/\n\nAlternatively, you can use the options below:",
+  "admin_offline": "The admin is currently offline. 🔴\n\nYou can use the automated menu below for assistance.",
+  "maintenance_mode_message": "The bot is currently down for maintenance. We'll be back shortly! Thank you for your patience. 🙏 or message me here m.me/lark.abalunan.1",
+  "confirm_yes": "Yes",
+  "confirm_no": "No",
+
+  "manual_entry_start": "😔 Oops! I couldn't read your receipt automatically.\nNo worries — we can still register your purchase manually! 🙌\nPlease type your 13-digit GCash reference number! Remove any spaces before sending the reference number. Example 123456789123:\n(Type 'Menu' to return to the main menu.)",
+  "manual_entry_invalid_ref": "❌ That doesn't look like a valid 13-digit reference number.\nPlease double-check and try again. Example: 1234567890123\n(Type 'Menu' to return to the main menu.)",
+  "manual_entry_thanks": "🎉 Thank you! Your reference is confirmed.\nWhich Mod did you purchase? Here are the available options:",
+  "manual_entry_prompt_mod": "👉 Please reply with just the Mod number (example: 1 )\n(Type 'Menu' to return to the main menu.)",
+  "manual_entry_invalid_mod": "❌ That's not a valid Mod number.\nPlease reply with one of the numbers from the list.\n(Type 'Menu' to return to the main menu.)",
+  "manual_entry_success": "✅ Success! Your purchase of *Mod {modId}* has been registered!\nYou now have *{claimsText}* available. 🎁\nAn admin will verify your receipt shortly — thank you for your trust! 💙\n(Type 'Menu' to return to the main menu.)",
+
+  "mods_header": "🎮 *Available Mods* 🎮\nHere’s what you can get right now:",
+  "mods_purchase_prompt": "💡 To purchase, Please reply with just the Mod number (example: 1)\n🔙 To return to the menu, type: Menu",
+  "mods_none_available": "📭 There are currently no mods available.\nCheck back later or type Menu to return.",
+
+  "purchase_invalid_format": "❌ Invalid format. Please type the Number. Example: (1).\n(Type 'Menu' to return to the main menu.)",
+  "purchase_invalid_mod": "❌ Invalid mod number. Please select a valid mod from the list.\n(Type 'Menu' to return to the main menu.)",
+  "purchase_prompt_email": "✅ You selected Mod {modId}: {modName}!\n\nTo proceed, please provide an email address that has **NOT** been used for a CarX Street account before.\n\n(Type 'Menu' to return to the main menu.)",
+  "purchase_invalid_email": "❌ That doesn't look like a valid email address. Please try again.\n(Type 'Menu' to return to the main menu.)",
+  "purchase_prompt_payment": "🎉 You're all set! Your email has been noted.\n\nPlease send {price} PHP via GCash to:\n 👨🏻‍💻Karl Abalunan\n📞{gcashNumber}\n\n📲 After paying, send a screenshot of your receipt to confirm your purchase.\nWe’ll verify and deliver your mod ASAP! ⏳💙\n(Type 'Menu' to return to the main menu after sending the receipt.)",
+
+  "receipt_analyzing": "Thank you! Analyzing your receipt, this may take a moment...",
+  "processing_receipt_wait": "I'm still analyzing your receipt. Please wait a moment, I'll get back to you shortly! 😊",
+  "receipt_cancelled_text_instead": "It looks like you sent a message instead of a receipt, so the purchase has been cancelled. Feel free to start again from the menu! 😊",
+  "receipt_fail_read": "🔍 I couldn't clearly read the amount or a valid 13-digit reference number from that receipt.\nDon’t worry — an admin has been notified and will assist you shortly! 🙏\n(Type 'Menu' to return to the main menu.)",
+  "receipt_confirm_purchase": "💳 I see a payment of {amount} PHP.\nDid you purchase Mod {modId}: {modName}?\n✅ Reply with Yes or No to confirm.\n(Type 'Menu' to return to the main menu.)",
+  "receipt_clarify_purchase": "🔍 I see a payment of {amount} PHP, which matches multiple mods:\n{modList}\nPlease type the number of the mod you purchased (e.g., *1*).\n(Type 'Menu' to return to the main menu.)",
+  "receipt_no_match": "💳 I received your payment of {amount} PHP, but no mod matches this price.\nAn admin has been notified to assist you shortly. 🙌\n(Type 'Menu' to return to the main menu.)",
+  "receipt_confirmation_success": "✅ Thank you! Your purchase of Mod {modId} has been registered with {claimsText}.\n(Type 'Menu' to return to the main menu.)",
+  "receipt_clarify_success": "✅ Got it! Your purchase of *Mod {modId}* has been registered with {claimsText}. 🎉\n(Type 'Menu' to return to the main menu.)",
+  "receipt_transaction_cancelled": "❌ Okay, the transaction has been cancelled.\nIf you made a mistake, feel free to contact an admin. 😊\n(Type 'Menu' to return to the main menu.)",
+
+  "error_duplicate_ref": "⚠️ This reference number has already been used.\nPlease contact an admin if you believe this is a mistake.\n(Type 'Menu' to return to the main menu.)",
+  "error_unexpected": "🔧 An unexpected error occurred. An admin has been notified. Please try again later.\n(Type 'Menu' to return to the main menu.)",
+  "error_unexpected_user": "🔧 Oops! Something went wrong on our end. Don't worry, our admin has been notified and will look into it. Please type 'Menu' to try again. Thank you for your patience!",
+  "error_no_mods_found": "⚠️ An issue occurred (no mods found). An admin has been notified.\n(Type 'Menu' to return to the main menu.)",
+
+  "claims_check_prompt": "🔍 Want to check how many replacements you have left?\nPlease enter your 13-digit GCash reference number! Remove any spaces before sending the reference number. Example 123456789123:\n(Type 'Menu' to return to the main menu.)",
+  "claims_check_invalid_format": "❌ Invalid reference number format. Please enter 13 digits.\n(Type 'Menu' to return to the main menu.)",
+  "claims_check_not_found": "🔍 No purchase found with that reference number. Please double-check.\n(Type 'Menu' to return to the main menu.)",
+  "claims_check_result": "🎉 You have {claimsText} left for Mod {modId} ({modName}).\n(Type 'Menu' to return to the main menu.)",
+
+  "replace_prompt": "🔁 Ready for a replacement?\nPlease provide your 13-digit GCash reference number!! Remove any spaces before sending the reference number. Example 123456789123:\n(Type 'Menu' to return to the main menu.)",
+  "replace_no_claims": "❌ You have already used all of your available replacement accounts for this reference number.\n(Type 'Menu' to return to the main menu.)",
+  "replace_limit_reached": "❌ You have already requested a replacement in the last 24 hours. Please try again later.\n(Type 'Menu' to return to the main menu.)",
+  "replace_success_automated": "✅ Your request is confirmed! Our automated system has started creating a brand new replacement account for you. This usually takes 5-10 minutes. The login details will be sent here as soon as it's ready. Thank you for your patience! 💙",
+
+  "contact_admin_prompt": "📩 Got a question or need help?\nPlease type your message, and I’ll forward it to the admin right away!\n(Type 'Menu' to return to the main menu.)",
+  "contact_admin_success": "✅ Your message has been sent to the admin!\nWe’ll get back to you as soon as possible. Thank you for reaching out! 🙌\n(Type 'Menu' to return to the main menu.)",
+
+  "report_prompt_ref": "🚨 Understood. To help you with your account issue, please type the 13-digit GCash reference number you used for this purchase.\n(Type 'Menu' to return.)",
+  "report_not_found": "🔍 Sorry, I couldn't find that reference number. Please double-check and try again.\n(Type 'Menu' to return.)",
+  "report_prompt_issue": "✅ Thank you. Now, please describe the issue with your account. For example: 'Someone else is using my account' or 'I can't log in'.\n(Type 'Menu' to return.)",
+  "report_success_user": "✅ Your report has been received. An admin has been notified and will assist you with your issue as soon as possible. Thank you for your patience.\n(Type 'Menu' to return.)",
+
+  "custom_mod_prompt_choice": "💎 Custom Mods 💎\nPlease choose what you'd like to order:",
+  "custom_mod_prompt_money": "💰 *Custom Money* 💰\n- 5 to 10 Million: 150 PHP\n- 10 to 30 Million: 200 PHP\nPlease type the amount you want (e.g., *8 Million*).",
+  "custom_mod_prompt_gold": "✨ *Custom Gold* ✨\n- 1k to 6k Gold: 150 PHP\nPlease type the amount of Gold you want (e.g., *5k*).",
+  "custom_mod_invalid_money": "🤔 I'm sorry, that amount is outside the allowed range. Please type an amount between 5 and 30 Million.",
+  "custom_mod_invalid_gold": "🤔 I'm sorry, that amount is outside the allowed range. Please type an amount between 1k and 6k.",
+  "custom_mod_prompt_payment": "✅ Great! You've requested *{orderAmount} {orderType}*.\n\nPlease send {price} PHP via GCash to:\n 👨🏻‍💻Karl Abalunan\n📞{gcashNumber}\n\n📲 After paying, please send a screenshot of your receipt here.\n(Type 'Menu' to return to the main menu after sending the receipt.)",
+  "custom_mod_receipt_fail": "🔍 I couldn't clearly read the amount or a valid 13-digit reference number from that receipt. An admin has been notified and will assist you shortly! 🙏",
+  "custom_mod_mismatch": "🤔 The amount on the receipt ({amount} PHP) doesn't match the expected price ({price} PHP). An admin has been notified to assist you. Please wait for them to reach out.",
+  "custom_mod_success": "✅ Thank you! Your custom mod order has been received and sent to the admin for processing. We'll get back to you shortly! 💙\n(Type 'Menu' to return to the main menu.)",
+
+  "automation_started_user": "✅ Thank you! Your order for *{modName}* is confirmed.\n\n🤖 Our automated system has started creating your account. This usually takes 5-10 minutes. The login details will be sent here as soon as it's ready.\n\nThank you for your patience! 💙",
+  "manual_creation_user": "✅ Thank you! Your order has been confirmed.\n\nAn admin will process it manually and send you the account details here shortly. Thank you for your patience! 🙏",
+  "delivery_success": "🎉 Hooray! Your account has been created successfully!",
+  "delivery_failed_user": "😔 We're sorry, but there was an error creating your account automatically. Don't worry, an admin has been notified and will contact you here shortly to assist you manually. Thank you for your patience!",
+
+  "proofs_message": "Here are our proofs of legitimacy! You can view them here:\n\nhttps://www.facebook.com/share/g/15CfJy2SRSt/\n\n(Type 'Menu' to return to the main menu.)"
+}
