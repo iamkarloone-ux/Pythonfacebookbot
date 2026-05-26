@@ -1,0 +1,93 @@
+{
+  "welcome_message": "🌟 Welcome sa KARLOWORKS ModShop! 🌟\nGame na kaming tulungan ka para mas ma-enjoy mo ang paglalaro!\nPumili ka lang ng option sa baba:",
+  "menu_option_1": "🔢 1️⃣  Tingnan ang mga available na mod",
+  "menu_option_2": "✅ 2️⃣  i-Check ang natitirang replacement accounts",
+  "menu_option_3": "🔁 3️⃣  Mag-request ng replacement account",
+  "menu_option_4": "💰 4️⃣  Custom Gold/Money",
+  "menu_option_5": "📩 5️⃣  Kausapin ang admin",
+  "menu_option_6": "🧾 6️⃣ Tingnan ang mga patunay",
+  "menu_option_7": "🚨 7️⃣ I-report ang isyu sa account",
+  "menu_suffix": "I-type lang ang number na napili mo! 😊",
+
+  "menu_option_1_button": "Tingnan ang Mods",
+  "menu_option_2_button": "I-Check ang Claims",
+  "menu_option_3_button": "Kumuha ng Replacement",
+  "menu_option_4_button": "Custom Order",
+  "menu_option_5_button": "Kausapin ang Admin",
+  "menu_option_6_button": "Tingnan ang Patunay",
+  "menu_option_7_button": "I-report ang Isyu",
+
+  "admin_online": "Online ang admin ngayon! 🟢\n\nPuwede mo siyang i-message diretso para sa tulong sa link na ito:\nhttps://www.facebook.com/share/19Z1AuEuGN/\n\nPwede ka ring pumili sa mga option sa baba:",
+  "admin_offline": "Offline muna ang admin ngayon. 🔴\n\nPwede mong gamitin ang automated menu sa baba para sa tulong.",
+  "maintenance_mode_message": "Kasalukuyan po kaming naka-maintenance. Magbabalik kami kaagad! Salamat sa iyong pasensya. 🙏 or message me here m.me/lark.abalunan.1",
+  "confirm_yes": "Oo",
+  "confirm_no": "Hindi",
+
+  "manual_entry_start": "😔 Ay, sorry! Hindi ko mabasa 'yung resibo mo.\nPero 'wag mag-alala, puwede nating i-register 'yan manually! 🙌\nPaki-type ang iyong 13-digit GCash reference number. 'Wag lagyan ng space. Example: 123456789123:\n(I-type ang 'Menu' para bumalik.)",
+  "manual_entry_invalid_ref": "❌ Mukhang hindi valid 'yung 13-digit reference number na nilagay mo.\nPaki-double check at subukan ulit. Example: 1234567890123\n(I-type ang 'Menu' para bumalik.)",
+  "manual_entry_thanks": "🎉 Salamat! Confirmed na ang reference number mo.\nAling Mod ang binili mo? Eto ang mga pagpipilian:",
+  "manual_entry_prompt_mod": "👉 Paki-reply lang ng Mod number (example: 1 )\n(I-type ang 'Menu' para bumalik.)",
+  "manual_entry_invalid_mod": "❌ Hindi valid 'yang Mod number.\nPumili lang ng number mula sa listahan.\n(I-type ang 'Menu' para bumalik.)",
+  "manual_entry_success": "✅ Success! Registered na ang binili mong *Mod {modId}*!\nMayroon ka nang *{claimsText}* na available. 🎁\nIve-verify ng admin ang resibo mo maya-maya. Salamat sa tiwala! 💙\n(I-type ang 'Menu' para bumalik.)",
+
+  "mods_header": "🎮 *Mga Available na Mods* 🎮\nEto ang mga puwede mong makuha ngayon:",
+  "mods_purchase_prompt": "💡 Para bumili, i-reply lang ang Mod number (example: 1)\n🔙 Para bumalik sa menu, i-type: Menu",
+  "mods_none_available": "📭 Pasensya na, wala pang available na mods sa ngayon.\nBalik ka na lang ulit or i-type ang Menu para bumalik.",
+
+  "purchase_invalid_format": "❌ Invalid 'yung format. Paki-type lang ang numero. Example: (1).\n(I-type ang 'Menu' para bumalik.)",
+  "purchase_invalid_mod": "❌ Invalid 'yung mod number. Pumili ng valid na mod galing sa listahan.\n(I-type ang 'Menu' para bumalik.)",
+  "purchase_prompt_email": "✅ Napili mo ang Mod {modId}: {modName}!\n\nPara magpatuy, kailangan namin ng email address na **HINDI** pa nagagamit sa kahit anong CarX Street account.\n\n(I-type ang 'Menu' para bumalik.)",
+  "purchase_invalid_email": "❌ Mukhang hindi valid 'yung email address. Pakisubukan ulit.\n(I-type ang 'Menu' para bumalik.)",
+  "purchase_prompt_payment": "🎉 Ayos! Nakuha na namin ang email mo.\n\nPaki-send ang {price} PHP sa GCash na ito:\n 👨🏻‍💻Karl Abalunan\n📞{gcashNumber}\n\n📲 Pagkatapos magbayad, paki-send ang screenshot ng resibo dito para ma-confirm ang purchase.\nIve-verify namin at ibibigay ang mod mo ASAP! ⏳💙\n(I-type ang 'Menu' para bumalik pagkatapos i-send ang resibo.)",
+
+  "receipt_analyzing": "Salamat! Tinitingnan ko ang iyong resibo, sandali lang po...",
+  "processing_receipt_wait": "Tinitingnan ko pa po ang resibo mo. Sandali lang po at babalikan kita agad! 😊",
+  "receipt_cancelled_text_instead": "Mukhang nagpadala ka ng text sa halip na resibo, kaya kinansela ang transaksyon. Pwede kang magsimula muli mula sa menu! 😊",
+  "receipt_fail_read": "🔍 Hindi ko masyadong makita 'yung amount o 'yung 13-digit reference number sa resibo.\nPero 'wag mag-alala, na-notify na ang admin para tulungan ka! 🙏\n(I-type ang 'Menu' para bumalik.)",
+  "receipt_confirm_purchase": "💳 Nakita ko ang bayad na {amount} PHP.\nBinili mo ba ang Mod {modId}: {modName}?\n✅ Mag-reply ng Yes o No para i-confirm.\n(I-type ang 'Menu' para bumalik.)",
+  "receipt_clarify_purchase": "🔍 Nakita ko ang bayad na {amount} PHP, pero tumutugma ito sa maraming mods:\n{modList}\nPaki-type ang number ng mod na binili mo (e.g., *1*).\n(I-type ang 'Menu' para bumalik.)",
+  "receipt_no_match": "💳 Nareceive ko ang bayad mong {amount} PHP, pero walang mod na katugma ng presyo na 'to.\nNa-notify na ang admin para tulungan ka. 🙌\n(I-type ang 'Menu' para bumalik.)",
+  "receipt_confirmation_success": "✅ Salamat! Registered na ang binili mong Mod {modId} at may kasama itong {claimsText}.\n(I-type ang 'Menu' para bumalik.)",
+  "receipt_clarify_success": "✅ Gets! Registered na ang binili mong *Mod {modId}* at may kasama itong {claimsText}. 🎉\n(I-type ang 'Menu' para bumalik.)",
+  "receipt_transaction_cancelled": "❌ Okay, na-cancel na ang transaction.\nKung nagkamali ka, 'wag mag-atubiling kausapin ang admin. 😊\n(I-type ang 'Menu' para bumalik.)",
+
+  "error_duplicate_ref": "⚠️ Nagamit na ang reference number na ito.\nMaki-contact sa admin kung sa tingin mo ay may pagkakamali.\n(I-type ang 'Menu' para bumalik.)",
+  "error_unexpected": "🔧 Nagkaroon ng error. Na-notify na ang admin. Paki-try na lang ulit mamaya.\n(I-type ang 'Menu' para bumalik.)",
+  "error_unexpected_user": "🔧 Ay, pasensya na! Nagkaroon ng technical issue. Na-notify na ang aming admin para ayusin ito. Paki-type ang 'Menu' para subukang muli. Salamat sa iyong pag-unawa!",
+  "error_no_mods_found": "⚠️ Nagkaroon ng issue (walang mods na nahanap). Na-notify na ang admin.\n(I-type ang 'Menu' para bumalik.)",
+
+  "claims_check_prompt": "🔍 Gusto mo bang i-check kung ilang replacements na lang ang natitira sa'yo?\nPaki-enter ang iyong 13-digit GCash reference number. 'Wag lagyan ng space. Example: 123456789123:\n(I-type ang 'Menu' para bumalik.)",
+  "claims_check_invalid_format": "❌ Mali 'yung format ng reference number. Dapat 13-digits.\n(I-type ang 'Menu' para bumalik.)",
+  "claims_check_not_found": "🔍 Walang purchase na nakita gamit ang reference number na 'yan. Paki-double check.\n(I-type ang 'Menu' para bumalik.)",
+  "claims_check_result": "🎉 Mayroon ka pang {claimsText} na natitira para sa Mod {modId} ({modName}).\n(I-type ang 'Menu' para bumalik.)",
+
+  "replace_prompt": "🔁 Ready ka na para sa replacement?\nPaki-provide ang iyong 13-digit GCash reference number. 'Wag lagyan ng space. Example: 123456789123:\n(I-type ang 'Menu' para bumalik.)",
+  "replace_no_claims": "❌ Nagamit mo na ang lahat ng iyong available na replacement account para sa reference number na ito.\n(I-type ang 'Menu' para bumalik.)",
+  "replace_limit_reached": "❌ Nakapag-request ka na ng replacement sa nakalipas na 24 oras. Pakisubukang muli mamaya.\n(I-type ang 'Menu' para bumalik.)",
+  "replace_success_automated": "✅ Kumpirmado ang iyong request! Sinimulan na ng aming automated system ang pag-gawa ng bago-bagong replacement account para sa'yo. Karaniwan itong tumatagal ng 5-10 minuto. Ipapadala namin ang login details dito kapag handa na. Salamat sa iyong pasensya! 💙",
+
+  "contact_admin_prompt": "📩 May tanong ka o kailangan mo ng tulong?\nI-type mo lang ang message mo, at ipapasa ko agad sa admin!\n(I-type ang 'Menu' para bumalik.)",
+  "contact_admin_success": "✅ Na-send na ang message mo sa admin!\nBabakikan ka namin sa lalong madaling panahon. Salamat sa pag-reach out! 🙌\n(I-type ang 'Menu' para bumalik.)",
+
+  "report_prompt_ref": "🚨 Naiintindihan ko. Para matulungan ka, paki-type ang 13-digit GCash reference number na ginamit mo para sa pagbili ng account na ito.\n(I-type ang 'Menu' para bumalik.)",
+  "report_not_found": "🔍 Paumanhin, hindi ko mahanap ang reference number na iyan. Paki-double check at subukang muli.\n(I-type ang 'Menu' para bumalik.)",
+  "report_prompt_issue": "✅ Salamat. Ngayon, paki-describe ang isyu sa iyong account. Halimbawa: 'May ibang gumagamit ng account ko' o 'Hindi ako makapag-log in'.\n(I-type ang 'Menu' para bumalik.)",
+  "report_success_user": "✅ Natanggap na namin ang iyong report. Na-notify na ang isang admin at aayusin nila ang isyu mo sa lalong madaling panahon. Maraming salamat sa iyong pasensya.\n(I-type ang 'Menu' para bumalik.)",
+
+  "custom_mod_prompt_choice": "💎 Custom Mods 💎\nPumili ka kung ano ang gusto mong i-order:",
+  "custom_mod_prompt_money": "💰 *Custom Money* 💰\n- 5 hanggang 10 Milyon: 150 PHP\n- 10 hanggang 30 Milyon: 200 PHP\nPaki-type kung magkano ang gusto mo (e.g., *8 Million*).",
+  "custom_mod_prompt_gold": "✨ *Custom Gold* ✨\n- 1k hanggang 6k Gold: 150 PHP\nPaki-type kung gaano karaming Gold ang gusto mo (e.g., *5k*).",
+  "custom_mod_invalid_money": "🤔 Pasensya na, wala sa range ang amount na iyan. Paki-type ng amount sa pagitan ng 5 hanggang 30 Milyon.",
+  "custom_mod_invalid_gold": "🤔 Pasensya na, wala sa range ang amount na iyan. Paki-type ng amount sa pagitan ng 1k hanggang 6k.",
+  "custom_mod_prompt_payment": "✅ Galing! Nag-request ka ng *{orderAmount} {orderType}*.\n\nPaki-send ang {price} PHP sa GCash na ito:\n 👨🏻‍💻Karl Abalunan\n📞{gcashNumber}\n\n📲 Pagkatapos magbayad, paki-send ang screenshot ng resibo dito.\n(I-type ang 'Menu' para bumalik pagkatapos i-send ang resibo.)",
+  "custom_mod_receipt_fail": "🔍 Hindi ko masyadong makita 'yung amount o 'yung 13-digit reference number sa resibo. Na-notify na ang admin para tulungan ka! 🙏",
+  "custom_mod_mismatch": "🤔 Hmm, hindi tugma 'yung amount sa resibo ({amount} PHP) sa inaasahang presyo ({price} PHP). Na-notify na ang admin para tulungan ka. Hintayin mo na lang sila.",
+  "custom_mod_success": "✅ Salamat! Nareceive na namin ang custom mod order mo at pinaprocess na ng admin. Babalikan ka namin agad! 💙\n(I-type ang 'Menu' para bumalik.)",
+
+  "automation_started_user": "✅ Salamat! Confirmed na ang order mo para sa *{modName}*.\n\n🤖 Sinimulan na ng aming automated system ang pag-gawa ng account mo. Karaniwan itong tumatagal ng 5-10 minuto. Ipapadala namin ang login details dito kapag handa na.\n\nSalamat sa iyong pasensya! 💙",
+  "manual_creation_user": "✅ Salamat! Confirmed na ang order mo.\n\nIsang admin ang mano-manong magpo-proseso nito at ipapadala sa iyo ang mga detalye ng account dito sa lalong madaling panahon. Salamat sa iyong pasensya! 🙏",
+  "delivery_success": "🎉 Heto na! Successful na nagawa ang account mo!",
+  "delivery_failed_user": "😔 Pasensya na, nagkaroon ng error sa pag-gawa ng account mo. Pero 'wag mag-alala, na-notify na ang admin at kokontakin ka nila dito para tulungan ka. Maraming salamat sa iyong pasensya!",
+
+  "proofs_message": "Narito ang aming mga patunay ng pagiging lehitimo! Maaari mong tingnan ang mga ito dito:\n\nhttps://www.facebook.com/share/g/15CfJy2SRSt/\n\n(I-type ang 'Menu' para bumalik.)"
+}
