@@ -84,7 +84,7 @@
   "custom_mod_mismatch": "🤔 Hmm, hindi tugma 'yung amount sa resibo ({amount} PHP) sa inaasahang presyo ({price} PHP). Na-notify na ang admin para tulungan ka. Hintayin mo na lang sila.",
   "custom_mod_success": "✅ Salamat! Nareceive na namin ang custom mod order mo at pinaprocess na ng admin. Babalikan ka namin agad! 💙\n(I-type ang 'Menu' para bumalik.)",
 
-  "automation_started_user": "✅ Salamat! Confirmed na ang order mo para sa *{modName}*.\n\n🤖 Sinimulan na ng aming automated system ang pag-gawa ng account mo. Karaniwan itong tumatagal ng 5-10 minuto. Ipapadala namin ang login details dito kapag handa na.\n\nSalamat sa iyong pasensya! 💙",
+  "automation_started_user": "✅ Salamat! Confirmed na ang order mo para sa *{modName}*.\n\n🤖 Sinimulan na ng aming automated system ang pag-gawa ng account mo. Karaniwan itong tumatagal ng 30 seconds. Ipapadala namin ang login details dito kapag handa na.\n\nSalamat sa iyong pasensya! 💙",
   "manual_creation_user": "✅ Salamat! Confirmed na ang order mo.\n\nIsang admin ang mano-manong magpo-proseso nito at ipapadala sa iyo ang mga detalye ng account dito sa lalong madaling panahon. Salamat sa iyong pasensya! 🙏",
   "delivery_success": "🎉 Heto na! Successful na nagawa ang account mo!",
   "delivery_failed_user": "😔 Pasensya na, nagkaroon ng error sa pag-gawa ng account mo. Pero 'wag mag-alala, na-notify na ang admin at kokontakin ka nila dito para tulungan ka. Maraming salamat sa iyong pasensya!",
