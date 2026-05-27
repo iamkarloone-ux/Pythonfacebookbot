@@ -13,27 +13,38 @@ from config import ADMIN_ID
 # Import secure cloner helpers
 from carx_cloner import get_profile, decrypt_payload, encrypt_payload_strict, BASE_SYNC
 
-# Your Supabase public URL for carlist.json
+# Your Supabase public URLs
 CAR_LIST_URL = "https://rznrrywtfiyehwkfntfj.supabase.co/storage/v1/object/public/profiles/carlist.json"
+CAR_IMAGES_URL = "https://rznrrywtfiyehwkfntfj.supabase.co/storage/v1/object/public/profiles/car_images.json"
 
 async def load_db_data_async() -> dict:
     """
-    Downloads carlist.json in real-time directly from Supabase Storage.
-    No bot restarts or Render redeploys are required when editing your cars!
+    Downloads both carlist.json (raw game data) and car_images.json (simple names/images)
+    from Supabase Storage and merges them dynamically in real-time.
     """
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(CAR_LIST_URL)
-            if response.status_code != 200:
-                print(f"❌ Failed to download carlist.json from Supabase: {response.status_code}")
+            # 1. Download the raw game data file
+            response_list = await client.get(CAR_LIST_URL)
+            if response_list.status_code != 200:
+                print(f"❌ Failed to download carlist.json: {response_list.status_code}")
                 return {}
             
-            # Aggressively clean and load JSON
-            content = response.text.strip()
+            content = response_list.text.strip()
             if not content.startswith("{"): content = "{" + content
             if not content.endswith("}"): content = content + "}"
-            data = json.loads(content)
+            raw_car_data = json.loads(content)
 
+            # 2. Download the simple image mapping file
+            car_maps = {}
+            response_maps = await client.get(CAR_IMAGES_URL)
+            if response_maps.status_code == 200:
+                try:
+                    car_maps = response_maps.json()
+                except Exception:
+                    print("⚠️ Warning: Failed to parse car_images.json. Check its syntax.")
+
+            # 3. Scan and extract raw cars from the massive game file
             car_registry = {}
             def scan(d):
                 if isinstance(d, dict):
@@ -44,10 +55,19 @@ async def load_db_data_async() -> dict:
                 elif isinstance(d, list):
                     for item in d: scan(item)
             
-            scan(data)
+            scan(raw_car_data)
+            
+            # 4. Merge the simple display names and image URLs into the extracted game cars
+            for car_id in list(car_registry.keys()):
+                mapping = car_maps.get(car_id, {})
+                # Overwrite/insert display name and image URL from the simple file
+                car_registry[car_id]["__desc_id"] = mapping.get("name", f"Car ID {car_id}")
+                car_registry[car_id]["image_url"] = mapping.get("image_url", "N/A")
+                
             return car_registry
+            
     except Exception as e:
-        print(f"❌ Error loading dynamic carlist.json: {e}")
+        print(f"❌ Error loading dynamic merged car data: {e}")
         return {}
 
 # --- USER FLOWS ---
