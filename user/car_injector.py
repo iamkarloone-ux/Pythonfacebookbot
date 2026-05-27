@@ -20,7 +20,7 @@ BASE_SYNC = "https://street-prod.carx-online.com/str/v1/client"
 CAR_LIST_URL = "https://rznrrywtfiyehwkfntfj.supabase.co/storage/v1/object/public/profiles/carlist.json"
 CAR_IMAGES_URL = "https://rznrrywtfiyehwkfntfj.supabase.co/storage/v1/object/public/profiles/car_images.json"
 
-# --- HELPER FUNCTIONS (FULLY ISOLATED) ---
+# --- HELPER FUNCTIONS (MATCHING YOUR WORKING SCRIPT EXACTLY) ---
 
 def find_compressed_data(d):
     if isinstance(d, dict):
@@ -35,13 +35,11 @@ def find_compressed_data(d):
     return None
 
 def decrypt_payload(compressed_str):
+    # Decrypts using fast orjson (exactly like your working script)
     return orjson.loads(gzip.decompress(base64.b64decode(compressed_str[4:])[1:]))
 
-def encrypt_payload_strict_injector(profile_dict):
-    """
-    STRICT ENCRYPTION: Uses standard Python json.dumps with zero whitespaces.
-    Matches carinject1.py exactly to prevent loading screen hangs in the game client!
-    """
+def encrypt_payload_strict(profile_dict):
+    # Encrypts using compact standard json (exactly like your working script)
     json_str = json.dumps(profile_dict, separators=(',', ':'))
     return "l84l" + base64.b64encode(b"\x00" + gzip.compress(json_str.encode("utf-8"))).decode("utf-8")
 
@@ -88,7 +86,7 @@ async def get_profile_injector(client, email, pwd, dev, carx="", is_target=False
     cont = find_compressed_data(env)
     
     if not cont:
-        return {"compressed_data": encrypt_payload_strict_injector({"resources":{"soft":{"amount":0}}})}, h
+        return {"compressed_data": encrypt_payload_strict({"resources":{"soft":{"amount":0}}})}, h
     return cont, h
 
 async def load_db_data_async() -> dict:
@@ -278,7 +276,7 @@ async def execute_car_injection(user_psid: str, email: str, password: str, car_i
         async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
             client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
             
-            # 1. Fetch Target Profile using our isolated function
+            # 1. Fetch Target Profile using our local isolated function
             cont, h = await get_profile_injector(client, email, password, tgt_dev, carx="", is_target=False)
             profile = decrypt_payload(cont["compressed_data"])
             
@@ -298,8 +296,8 @@ async def execute_car_injection(user_psid: str, email: str, password: str, car_i
             garage[pushed_id] = garage.pop(str(last_id))
             garage[str(last_id)] = injected_car # Inject clean, sanitized car
             
-            # 5. Strict Standard JSON Encryption (Matches carinject1.py exactly!) and Upload
-            cont["compressed_data"] = encrypt_payload_strict_injector(profile)
+            # 5. Strict Standard Encryption and Upload (Calls local function using standard json!)
+            cont["compressed_data"] = encrypt_payload_strict(profile)
             cont["lastSyncTime"] = int(time.time())
             
             r_up = await client.post(f"{BASE_SYNC}/profiles", json=cont, headers=h)
