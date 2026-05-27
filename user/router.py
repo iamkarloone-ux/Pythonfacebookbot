@@ -3,10 +3,10 @@ import state_manager
 import messenger_api
 import database as db
 import payment_verifier
-import language_manager as lang  # <-- CRITICAL MISSING IMPORT FIXED HERE
+import language_manager as lang
 from config import ADMIN_ID
 
-from user import menu, purchase, account, support, custom, manual
+from user import menu, purchase, account, support, custom, manual, car_injector
 
 async def handle_user_message(sender_psid: str, event: dict, lower_text: str, received_text: str):
     # 1. Check Paused Status & Maintenance
@@ -44,10 +44,9 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
     message = event.get("message", {})
     attachments = message.get("attachments", [])
     if attachments and attachments[0].get("type") == "image":
-        if not message.get("sticker_id") and state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod']:
+        if not message.get("sticker_id") and state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod', 'awaiting_receipt_for_car_injector']:
             image_url = attachments[0]["payload"]["url"]
             
-            # This line was crashing because 'lang' was not imported!
             await messenger_api.send_text(sender_psid, lang.get_text('receipt_analyzing', user_lang))
             
             if state == 'awaiting_receipt_for_custom_mod':
@@ -56,6 +55,12 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
                 await messenger_api.send_text(ADMIN_ID, f"🧾 Custom Order Receipt from {user_name}\nOrder: {state_obj['orderAmount']} {state_obj['orderType']}")
                 await messenger_api.send_text(sender_psid, lang.get_text('custom_mod_success', user_lang))
                 state_manager.clear_user_state(sender_psid)
+            elif state == 'awaiting_receipt_for_car_injector':
+                # Car Injector -> AI Scanner (Bypasses manual fallback if failed)
+                analysis = await payment_verifier.analyze_receipt_with_external_api(image_url)
+                if not analysis:
+                    analysis = {"extracted_info": {"amount": "0", "reference_number": "Failed"}}
+                await car_injector.handle_car_receipt_analysis(sender_psid, analysis, user_lang, image_url)
             else:
                 # Normal Mod -> AI Scanner
                 analysis = await payment_verifier.analyze_receipt_with_external_api(image_url)
@@ -78,9 +83,12 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
         elif state == 'awaiting_admin_message': return await support.forward_message_to_admin(sender_psid, received_text, user_lang)
         elif state == 'awaiting_report_ref': return await support.process_report_ref(sender_psid, received_text, user_lang)
         elif state == 'awaiting_report_issue_desc': return await support.process_report_description(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_car_inject_email': return await car_injector.handle_car_injector_email(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_car_inject_password': return await car_injector.handle_car_injector_password(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_car_inject_choice': return await car_injector.handle_car_selection(sender_psid, received_text, user_lang)
         
         # If user sends text instead of a receipt image
-        if state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod']:
+        if state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod', 'awaiting_receipt_for_car_injector']:
             if received_text:
                 await messenger_api.send_text(sender_psid, lang.get_text('receipt_cancelled_text_instead', user_lang))
                 state_manager.clear_user_state(sender_psid)
@@ -95,6 +103,7 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
         '5': lambda: support.prompt_admin_message(sender_psid, user_lang),
         '6': lambda: support.handle_view_proofs(sender_psid, user_lang),
         '7': lambda: support.prompt_report_ref(sender_psid, user_lang),
+        '8': lambda: car_injector.prompt_car_injector(sender_psid, user_lang),
     }
 
     action = commands.get(lower_text)
