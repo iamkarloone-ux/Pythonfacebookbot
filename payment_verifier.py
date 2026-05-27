@@ -30,7 +30,7 @@ async def analyze_receipt_with_external_api(image_url: str) -> dict:
         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
 
         # 3. Call Official Google Gemini 1.5 Flash REST API
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
         
         # Matches your curl headers exactly
         headers = {
