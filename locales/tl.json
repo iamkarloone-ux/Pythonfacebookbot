@@ -7,6 +7,7 @@
   "menu_option_5": "📩 5️⃣  Kausapin ang admin",
   "menu_option_6": "🧾 6️⃣ Tingnan ang mga patunay",
   "menu_option_7": "🚨 7️⃣ I-report ang isyu sa account",
+  "menu_option_8": "🚗 8️⃣  Mag-Inject ng Custom Cars",
   "menu_suffix": "I-type lang ang number na napili mo! 😊",
 
   "menu_option_1_button": "Tingnan ang Mods",
@@ -16,6 +17,7 @@
   "menu_option_5_button": "Kausapin ang Admin",
   "menu_option_6_button": "Tingnan ang Patunay",
   "menu_option_7_button": "I-report ang Isyu",
+  "menu_option_8_button": "Mag-Inject ng Kotse",
 
   "admin_online": "Online ang admin ngayon! 🟢\n\nPuwede mo siyang i-message diretso para sa tulong sa link na ito:\nhttps://www.facebook.com/share/19Z1AuEuGN/\n\nPwede ka ring pumili sa mga option sa baba:",
   "admin_offline": "Offline muna ang admin ngayon. 🔴\n\nPwede mong gamitin ang automated menu sa baba para sa tulong.",
@@ -89,5 +91,15 @@
   "delivery_success": "🎉 Heto na! Successful na nagawa ang account mo!",
   "delivery_failed_user": "😔 Pasensya na, nagkaroon ng error sa pag-gawa ng account mo. Pero 'wag mag-alala, na-notify na ang admin at kokontakin ka nila dito para tulungan ka. Maraming salamat sa iyong pasensya!",
 
-  "proofs_message": "Narito ang aming mga patunay ng pagiging lehitimo! Maaari mong tingnan ang mga ito dito:\n\nhttps://www.facebook.com/share/g/15CfJy2SRSt/\n\n(I-type ang 'Menu' para bumalik.)"
-}
+  "proofs_message": "Narito ang aming mga patunay ng pagiging lehitimo! Maaari mong tingnan ang mga ito dito:\n\nhttps://www.facebook.com/share/g/15CfJy2SRSt/\n\n(I-type ang 'Menu' para bumalik.)",
+
+  "car_inject_prompt_email": "🚗 *Car Injection Service* 🚗\nPaki-provide ang email address ng iyong kasalukuyang CarX Street account:\n(I-type ang 'Menu' para bumalik.)",
+  "car_inject_prompt_pass": "✅ Email noted. Ngayon, paki-enter naman ang password ng iyong CarX Street account:\n(I-type ang 'Menu' para bumalik.)",
+  "car_inject_catalog_header": "🏎️ *Mga Magagamit na Kotse para sa Injection* 🏎️\nNarito ang mga kotse na maaari nating i-inject sa iyong garahe ngayon:",
+  "car_inject_prompt_choice": "👉 Paki-reply ang mismong Car ID number ng kotseng nais mong i-inject sa iyong garahe.\n(I-type ang 'Menu' para bumalik.)",
+  "car_inject_prompt_payment": "🎉 Ayos! Napili mo ang Car ID {carId}.\n\nPaki-send ang 150 PHP sa GCash na ito:\n 👨🏻‍💻Karl Abalunan\n📞{gcashNumber}\n\n📲 Pagkatapos magbayad, paki-send ang screenshot ng resibo dito.\n(I-type ang 'Menu' para bumalik.)",
+  "car_inject_manual_queue": "😔 Ay, sorry! Hindi ko mabasa 'yung resibo mo.\n\nPero 'wag mag-alala — ang mga detalye mo (email, password, at napiling kotse) ay ipinasa na namin sa admin para mai-proseso nang manual. I-di-deliver namin ito sa'yo sa lalong madaling panahon! Salamat sa iyong pasensya! 🙏💙\n(I-type ang 'Menu' para bumalik.)",
+  "car_inject_started_user": "⏳ Kumokonekta sa CarX Servers... Paki-antay lamang habang inilalagay ang kotse sa iyong garahe.",
+  "car_inject_success": "🎉 Heto na! Successful na pumasok ang iyong bagong {carName} sa iyong garahe! Buksan na ang laro at mag-enjoy! 🏎️🔥",
+  "car_inject_failed_user": "😔 Pasensya na, nagkaroon ng error sa pag-inject ng iyong kotse. Na-notify na ang admin at manu-mano nilang ilalagay ito sa iyong garahe. Maraming salamat sa iyong pasensya!"
+}1
