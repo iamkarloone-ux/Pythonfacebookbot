@@ -14,17 +14,22 @@ Expected Output Format:
 
 async def analyze_receipt_with_external_api(image_url: str) -> dict:
     """
-    Downloads the receipt image, converts it to base64, and sends it 
-    directly to OpenRouter as a Data URI to bypass Facebook CDN blocks.
+    Downloads the receipt image using browser-impersonating headers to bypass 
+    Facebook CDN blocks, encodes to base64, and sends it to OpenRouter.
     """
     if not OPENROUTER_API_KEY:
         print("❌ Error: OPENROUTER_API_KEY is not configured in Render environment variables!")
         return None
 
     try:
-        # 1. Download image bytes locally on Render to bypass Facebook CDN blocks
+        # Standard Chrome browser user-agent to bypass Facebook CDN blocks
+        download_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+
+        # 1. Download image bytes locally on Render
         async with httpx.AsyncClient() as client:
-            img_response = await client.get(image_url)
+            img_response = await client.get(image_url, headers=download_headers) # <-- Added headers here
             if img_response.status_code != 200:
                 print(f"❌ Failed to download receipt image from Facebook: {img_response.status_code}")
                 return None
@@ -53,7 +58,7 @@ async def analyze_receipt_with_external_api(image_url: str) -> dict:
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": base64_data_uri # Bypasses Facebook CDN blocks entirely!
+                            "url": base64_data_uri
                         }
                     }
                 ]
@@ -61,7 +66,7 @@ async def analyze_receipt_with_external_api(image_url: str) -> dict:
         ]
         
         payload = {
-            "model": "google/gemma-4-31b-it:free", # Multimodal Free model from screenshot
+            "model": "google/gemma-4-31b-it:free",
             "messages": messages
         }
         
@@ -86,16 +91,10 @@ async def analyze_receipt_with_external_api(image_url: str) -> dict:
         return None
 
 def clean_and_parse_json(text: str) -> dict:
-    """
-    Cleans up any markdown blocks (like ```json ... ```) returned by the AI
-    and parses it into a valid Python dictionary.
-    """
     try:
-        # Remove markdown code formatting if present
         clean_text = re.sub(r'```json\s*', '', text)
         clean_text = re.sub(r'```\s*', '', clean_text).strip()
         
-        # Regex search for the JSON boundaries
         json_match = re.search(r'({[\s\S]*})', clean_text)
         if not json_match:
             print(f"❌ Could not find valid JSON boundaries in AI text: {text}")
@@ -103,14 +102,11 @@ def clean_and_parse_json(text: str) -> dict:
             
         parsed = json.loads(json_match.group(1))
         
-        # Sanitize the output data
         if "extracted_info" in parsed:
             info = parsed["extracted_info"]
             if "reference_number" in info:
-                # Remove any spaces or non-digit characters from reference
                 info["reference_number"] = re.sub(r'\D', '', str(info["reference_number"]))
             if "amount" in info:
-                # Remove commas from the amount representation
                 info["amount"] = str(info["amount"]).replace(',', '')
                 
         return parsed
