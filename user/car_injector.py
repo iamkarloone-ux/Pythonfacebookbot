@@ -4,18 +4,92 @@ import json
 import time
 import httpx
 import uuid
+import base64
+import gzip
+import orjson
 import database as db
 import state_manager
 import messenger_api
 import language_manager as lang
 from config import ADMIN_ID
 
-# Import secure cloner helpers (Uses orjson for fast, strict encryption!)
-from carx_cloner import get_profile, decrypt_payload, encrypt_payload_strict, BASE_SYNC
+BASE_AUTH = "https://carx-id-prod.carx-online.com/api/auth"
+BASE_SYNC = "https://street-prod.carx-online.com/str/v1/client"
 
 # Your Supabase public URLs
 CAR_LIST_URL = "https://rznrrywtfiyehwkfntfj.supabase.co/storage/v1/object/public/profiles/carlist.json"
 CAR_IMAGES_URL = "https://rznrrywtfiyehwkfntfj.supabase.co/storage/v1/object/public/profiles/car_images.json"
+
+# --- HELPER FUNCTIONS (FULLY ISOLATED) ---
+
+def find_compressed_data(d):
+    if isinstance(d, dict):
+        if "compressed_data" in d: return d
+        for v in d.values():
+            res = find_compressed_data(v)
+            if res: return res
+    elif isinstance(d, list):
+        for item in d:
+            res = find_compressed_data(item)
+            if res: return res
+    return None
+
+def decrypt_payload(compressed_str):
+    return orjson.loads(gzip.decompress(base64.b64decode(compressed_str[4:])[1:]))
+
+def encrypt_payload_strict_injector(profile_dict):
+    """
+    STRICT ENCRYPTION: Uses standard Python json.dumps with zero whitespaces.
+    Matches carinject1.py exactly to prevent loading screen hangs in the game client!
+    """
+    json_str = json.dumps(profile_dict, separators=(',', ':'))
+    return "l84l" + base64.b64encode(b"\x00" + gzip.compress(json_str.encode("utf-8"))).decode("utf-8")
+
+async def get_profile_injector(client, email, pwd, dev, carx="", is_target=False):
+    payload = {"project": "STREET", "username": email, "password": pwd, "deviceId": dev, "deviceUniqueId": dev}
+    r = await client.post(f"{BASE_AUTH}/login", json=payload)
+    
+    if r.status_code != 200 and is_target:
+        reg_r = await client.post(f"{BASE_AUTH}/register", json=payload)
+        
+        if reg_r.status_code != 200:
+            raise Exception(f"CarX Registration Failed: {reg_r.text}")
+            
+        reg_data = reg_r.json()
+        if isinstance(reg_data, dict) and "e" in reg_data:
+            err_msg = reg_data["e"].get("message", "Unknown Registration Error")
+            raise Exception(f"CarX Registration Rejected: {err_msg}")
+            
+        await client.post(f"{BASE_AUTH}/verify", json={"code": "g4a369"})
+        r = await client.post(f"{BASE_AUTH}/login", json=payload)
+        
+    if r.status_code != 200:
+        raise Exception(f"CarX Login Failed ({r.status_code}): {r.text}")
+    
+    data = r.json()
+    token = None
+    if isinstance(data, dict):
+        token = data.get("d", {}).get("token") or data.get("token")
+        
+    if not token:
+        raise Exception(f"CarX authentication succeeded but no token was returned by the server. Response: {r.text}")
+    
+    if not carx:
+        carx = str(data.get("d", {}).get("userId") or data.get("userId") or "")
+        
+    h = {"Authorization": f"Bearer {token}", "x-token": token, "X-CarX-Id": carx, "X-Device-Id": dev}
+    await client.post(f"{BASE_AUTH}/verify", json={"code": "g4a369"}, headers=h)
+    
+    r_profiles = await client.get(f"{BASE_SYNC}/profiles", headers=h)
+    if r_profiles.status_code != 200:
+        raise Exception(f"Failed to fetch profiles from CarX ({r_profiles.status_code}): {r_profiles.text}")
+        
+    env = r_profiles.json()
+    cont = find_compressed_data(env)
+    
+    if not cont:
+        return {"compressed_data": encrypt_payload_strict_injector({"resources":{"soft":{"amount":0}}})}, h
+    return cont, h
 
 async def load_db_data_async() -> dict:
     """
@@ -204,8 +278,8 @@ async def execute_car_injection(user_psid: str, email: str, password: str, car_i
         async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
             client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
             
-            # 1. Fetch Target Profile
-            cont, h = await get_profile(client, email, password, tgt_dev, carx="", is_target=False)
+            # 1. Fetch Target Profile using our isolated function
+            cont, h = await get_profile_injector(client, email, password, tgt_dev, carx="", is_target=False)
             profile = decrypt_payload(cont["compressed_data"])
             
             # 2. Locate Garage
@@ -224,8 +298,8 @@ async def execute_car_injection(user_psid: str, email: str, password: str, car_i
             garage[pushed_id] = garage.pop(str(last_id))
             garage[str(last_id)] = injected_car # Inject clean, sanitized car
             
-            # 5. Strict orjson Encryption (Modular helper) and Upload
-            cont["compressed_data"] = encrypt_payload_strict(profile)
+            # 5. Strict Standard JSON Encryption (Matches carinject1.py exactly!) and Upload
+            cont["compressed_data"] = encrypt_payload_strict_injector(profile)
             cont["lastSyncTime"] = int(time.time())
             
             r_up = await client.post(f"{BASE_SYNC}/profiles", json=cont, headers=h)
