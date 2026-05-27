@@ -1,7 +1,8 @@
 import httpx
 import json
+import base64
 import re
-from config import OPENROUTER_API_KEY
+from config import GEMINI_API_KEY
 
 ANALYSIS_PROMPT = """ACT AS A GCASH RECEIPT SCANNER.
 1. Find the 13-digit Reference Number (look for 'Ref No' or 'Reference No').
@@ -13,64 +14,61 @@ Expected Output Format:
 
 async def analyze_receipt_with_external_api(image_url: str) -> dict:
     """
-    Sends the Facebook receipt image URL to OpenRouter's Gemma Multimodal model 
-    for OCR text extraction.
+    Downloads the receipt image, converts it to base64, and sends it 
+    directly to official Google Gemini 2.0 Flash in AI Studio.
     """
-    # Use the model name from your screenshot
-    model_name = "google/gemma-4-31b-it:free"
-    
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://apiworker.onrender.com", # Required by OpenRouter
-        "X-Title": "KARLOWORKS Bot",
-        "Content-Type": "application/json"
-    }
-    
-    # OpenRouter/OpenAI-standard Vision Payload
-    payload = {
-        "model": model_name,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": ANALYSIS_PROMPT
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": image_url
+    try:
+        # 1. Download the image bytes locally on Render
+        async with httpx.AsyncClient() as client:
+            img_response = await client.get(image_url)
+            if img_response.status_code != 200:
+                print(f"❌ Failed to download receipt image: {img_response.status_code}")
+                return None
+            img_bytes = img_response.content
+
+        # 2. Encode image to Base64
+        img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+
+        # 3. Call Official Google Gemini 2.0 Flash REST API
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": ANALYSIS_PROMPT
+                        },
+                        {
+                            "inlineData": {
+                                "mimeType": "image/jpeg",
+                                "data": img_base64
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "responseMimeType": "application/json" # Tells Gemini to strictly reply in JSON
             }
-        ]
-    }
-    
-    print(f"[OpenRouter] Sending receipt image to {model_name}...")
-    
-    async with httpx.AsyncClient(timeout=45.0) as client:
-        try:
-            response = await client.post(url, json=payload, headers=headers)
+        }
+
+        print("[Gemini API] Scanning receipt directly via Google AI Studio...")
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload)
             if response.status_code != 200:
-                print(f"❌ OpenRouter API Error ({response.status_code}): {response.text}")
+                print(f"❌ Gemini API Error ({response.status_code}): {response.text}")
                 return None
                 
             data = response.json()
-            choices = data.get("choices", [])
-            if not choices:
-                print(f"❌ OpenRouter returned no choices. Response: {data}")
-                return None
-                
-            ai_text = choices[0].get("message", {}).get("content", "").strip()
-            return clean_and_parse_json(ai_text)
             
-        except Exception as e:
-            print(f"❌ Exception in OpenRouter receipt analysis: {e}")
-            return None
+            # Extract text from Google's response payload
+            ai_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            return clean_and_parse_json(ai_text)
+
+    except Exception as e:
+        print(f"❌ Exception in direct Gemini analysis: {e}")
+        return None
 
 def clean_and_parse_json(text: str) -> dict:
     """
@@ -102,5 +100,5 @@ def clean_and_parse_json(text: str) -> dict:
                 
         return parsed
     except Exception as e:
-        print(f"❌ Error cleaning/parsing OpenRouter JSON: {e}. Raw Text: {text}")
+        print(f"❌ Error cleaning/parsing Gemini JSON: {e}. Raw Text: {text}")
         return None
