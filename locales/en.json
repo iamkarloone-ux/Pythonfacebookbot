@@ -101,5 +101,5 @@
   "car_inject_manual_queue": "😔 Oops! Our scanner couldn't read your receipt automatically.\n\nDon't worry — your order details (email, password, and car choice) have been forwarded to our admin for manual processing. We will notify you here once it is ready! Thank you for your patience! 🙏💙\n(Type 'Menu' to return.)",
   "car_inject_started_user": "⏳ Connecting to CarX Servers... Please wait while we inject the car into your garage.",
   "car_inject_success": "🎉 Hooray! Your new {carName} has been successfully injected into your garage! Open your game and enjoy your new ride! 🏎️🔥",
-  "car_inject_failed_user": "😔 We're sorry, but there was an error injecting your car automatically. An admin has been notified and will process your injection manually shortly. Thank you for your patience!"
+  "car_inject_failed_user": "😔 We're sorry, but there was an error injecting your car automatically. An admin has been notified and will process your injection manually shortly. Thank you for your patience!)"
 }
