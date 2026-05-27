@@ -5,12 +5,13 @@ import language_manager as lang
 import user.manual as manual
 import secrets
 from user.tasks import process_account_creation
-from config import ADMIN_ID # Global Admin ID import
+from config import ADMIN_ID
 
 def generate_password(length=10):
     """Generates a secure random password."""
     return secrets.token_hex(length // 2)
 
+# UPDATED: Splitting the catalog into separate clean bubbles
 async def handle_view_mods(sender_psid: str, user_lang: str = 'en'):
     mods = await db.get_mods()
     replies = [{"title": "⬅️ Back to Menu", "payload": "menu"}]
@@ -19,13 +20,27 @@ async def handle_view_mods(sender_psid: str, user_lang: str = 'en'):
         await messenger_api.send_quick_replies(sender_psid, lang.get_text('mods_none_available', user_lang), replies)
         return
         
-    response = f"{lang.get_text('mods_header', user_lang)}\n"
+    # 1. Send the Header Bubble first
+    await messenger_api.send_text(sender_psid, lang.get_text('mods_header', user_lang))
+    
+    # 2. Send each Mod Set as its own dedicated bubble
     for mod in mods:
         claims_text = '1 Replacement' if mod['default_claims_max'] == 1 else f"{mod['default_claims_max']} Replacements"
-        response += f"\n📦 Type {mod['id']}:\n{mod['description'] or 'N/A'}\n💰 Price: {mod['price']} PHP\n🔁 FreeAcc: {claims_text}\n🖼️ Image: {mod['image_url'] or 'N/A'}\n"
+        mod_info = (
+            f"📦 *Type {mod['id']}: {mod['name']}*\n\n"
+            f"{mod['description'] or 'N/A'}\n\n"
+            f"💰 Price: {mod['price']} PHP\n"
+            f"🔁 FreeAcc: {claims_text}"
+        )
+        if mod['image_url'] and mod['image_url'] != 'N/A':
+            mod_info += f"\n🖼️ Image: {mod['image_url']}"
+            
+        await messenger_api.send_text(sender_psid, mod_info)
         
-    final_message = response + f"\n{lang.get_text('mods_purchase_prompt', user_lang)}"
-    await messenger_api.send_quick_replies(sender_psid, final_message, replies)
+    # 3. Send the final purchase prompt with the Quick Replies attached
+    final_prompt = lang.get_text('mods_purchase_prompt', user_lang)
+    await messenger_api.send_quick_replies(sender_psid, final_prompt, replies)
+    
     state_manager.set_user_state(sender_psid, 'awaiting_want_mod', lang=user_lang)
 
 async def handle_want_mod(sender_psid: str, text: str, user_lang: str = 'en'):
@@ -66,7 +81,6 @@ async def handle_email_for_purchase(sender_psid: str, text: str, user_lang: str 
     await messenger_api.send_quick_replies(sender_psid, payment_message, replies)
     state_manager.set_user_state(sender_psid, 'awaiting_receipt_for_purchase', modId=mod_id, email=email, lang=user_lang)
 
-# CORRECTED SIGNATURE: Aligned perfectly with user/router.py
 async def handle_receipt_analysis(sender_psid: str, analysis: dict, user_lang: str, image_url: str):
     state = state_manager.get_user_state(sender_psid) or {}
     
@@ -84,7 +98,6 @@ async def handle_receipt_analysis(sender_psid: str, analysis: dict, user_lang: s
     except Exception as e:
         print(f"Profile Fetch Failed: {e}")
 
-    # PURE PYTHON AI FAILURE CHECK: Redirects cleanly to Manual Entry
     if amount == 0.0 or not ref_number or len(ref_number) != 13 or not ref_number.isdigit():
         print(f"[AI-SCAN-FAILED] Redirecting user {sender_psid} to manual entry.")
         await manual.start_manual_entry_flow(sender_psid, image_url, user_lang)
