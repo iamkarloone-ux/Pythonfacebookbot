@@ -1,3 +1,4 @@
+# user/menu.py
 import database as db
 import messenger_api
 import language_manager as lang
@@ -10,9 +11,9 @@ async def show_user_menu(sender_psid: str, user_lang: str = 'en'):
     await messenger_api.send_text(sender_psid, initial_msg)
     
     menu_text = f"{lang.get_text('welcome_message', user_lang)}\n\n"
-    for i in range(1, 8):
+    for i in range(1, 9):
         menu_text += f"{lang.get_text(f'menu_option_{i}', user_lang)}\n"
     menu_text += f"\n{lang.get_text('menu_suffix', user_lang)}"
     
-    replies = [{"title": lang.get_text(f'menu_option_{i}_button', user_lang), "payload": str(i)} for i in range(1, 8)]
+    replies = [{"title": lang.get_text(f'menu_option_{i}_button', user_lang), "payload": str(i)} for i in range(1, 9)]
     await messenger_api.send_quick_replies(sender_psid, menu_text, replies)
