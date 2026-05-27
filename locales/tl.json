@@ -101,5 +101,5 @@
   "car_inject_manual_queue": "😔 Ay, sorry! Hindi ko mabasa 'yung resibo mo.\n\nPero 'wag mag-alala — ang mga detalye mo (email, password, at napiling kotse) ay ipinasa na namin sa admin para mai-proseso nang manual. I-di-deliver namin ito sa'yo sa lalong madaling panahon! Salamat sa iyong pasensya! 🙏💙\n(I-type ang 'Menu' para bumalik.)",
   "car_inject_started_user": "⏳ Kumokonekta sa CarX Servers... Paki-antay lamang habang inilalagay ang kotse sa iyong garahe.",
   "car_inject_success": "🎉 Heto na! Successful na pumasok ang iyong bagong {carName} sa iyong garahe! Buksan na ang laro at mag-enjoy! 🏎️🔥",
-  "car_inject_failed_user": "😔 Pasensya na, nagkaroon ng error sa pag-inject ng iyong kotse. Na-notify na ang admin at manu-mano nilang ilalagay ito sa iyong garahe. Maraming salamat sa iyong pasensya!"
+  "car_inject_failed_user": "😔 Pasensya na, nagkaroon ng error sa pag-inject ng iyong kotse. Na-notify na ang admin at manu-mano nilang ilalagay ito sa iyong garahe. Maraming salamat sa iyong pasensya!)"
 }
