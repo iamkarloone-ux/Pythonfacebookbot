@@ -10,7 +10,7 @@ import messenger_api
 import language_manager as lang
 from config import ADMIN_ID
 
-# Import secure cloner helpers
+# Import secure cloner helpers (Uses orjson for fast, strict encryption!)
 from carx_cloner import get_profile, decrypt_payload, encrypt_payload_strict, BASE_SYNC
 
 # Your Supabase public URLs
@@ -60,7 +60,6 @@ async def load_db_data_async() -> dict:
             # 4. Merge the simple display names and image URLs into the extracted game cars
             for car_id in list(car_registry.keys()):
                 mapping = car_maps.get(car_id, {})
-                # Overwrite/insert display name and image URL from the simple file
                 car_registry[car_id]["__desc_id"] = mapping.get("name", f"Car ID {car_id}")
                 car_registry[car_id]["image_url"] = mapping.get("image_url", "N/A")
                 
@@ -90,17 +89,14 @@ async def handle_car_injector_password(sender_psid: str, text: str, user_lang: s
     state = state_manager.get_user_state(sender_psid)
     password = text.strip()
     
-    # Download the latest car list from Supabase
     car_db = await load_db_data_async()
     if not car_db:
         await messenger_api.send_text(sender_psid, "❌ No cars found. Please contact the admin.")
         state_manager.clear_user_state(sender_psid)
         return
 
-    # Send Header
     await messenger_api.send_text(sender_psid, lang.get_text('car_inject_catalog_header', user_lang))
 
-    # Send each Car as a clean text card + actual Image Attachment Bubble
     for car_id, car_data in car_db.items():
         desc = car_data.get("__desc_id", f"Car ID {car_id}")
         image_url = car_data.get("image_url", "N/A")
@@ -108,10 +104,9 @@ async def handle_car_injector_password(sender_psid: str, text: str, user_lang: s
         car_info = f"🚗 *Car ID: {car_id}*\nModel: {desc}\n💰 Price: 150 PHP\nSafe Injection: Yes"
         await messenger_api.send_text(sender_psid, car_info)
         
-        # SENDS AN ACTUAL VISUAL IMAGE BUBBLE!
         if image_url and image_url != "N/A":
             await messenger_api.send_image(sender_psid, image_url)
-            await asyncio.sleep(0.2) # Prevent packet overlaps
+            await asyncio.sleep(0.2)
 
     replies = [{"title": "⬅️ Back to Menu", "payload": "menu"}]
     prompt_choice_msg = lang.get_text('car_inject_prompt_choice', user_lang)
@@ -165,7 +160,6 @@ async def handle_car_receipt_analysis(sender_psid: str, analysis: dict, user_lan
 
     if amount != 150.0 or len(ref_number) != 13 or not ref_number.isdigit():
         print(f"[AI-SCAN-FAILED-INJECTOR] Directing injection job {car_id} to manual admin queue.")
-        
         user_name = await messenger_api.get_user_profile(sender_psid)
         
         admin_alert = (
@@ -186,9 +180,7 @@ async def handle_car_receipt_analysis(sender_psid: str, analysis: dict, user_lan
 
     try:
         await db.add_reference(ref_number, sender_psid, 1)
-        
         asyncio.create_task(execute_car_injection(sender_psid, email, password, car_id, user_lang))
-        
         user_name = await messenger_api.get_user_profile(sender_psid)
         await messenger_api.send_text(ADMIN_ID, f"🤖 AUTOMATED CAR INJECTION queued for {user_name}\nCar ID: {car_id}\nEmail: {email}")
         
@@ -212,18 +204,27 @@ async def execute_car_injection(user_psid: str, email: str, password: str, car_i
         async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
             client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
             
+            # 1. Fetch Target Profile
             cont, h = await get_profile(client, email, password, tgt_dev, carx="", is_target=False)
             profile = decrypt_payload(cont["compressed_data"])
             
+            # 2. Locate Garage
             garage = profile["cars"]["items"] if ("cars" in profile and "items" in profile["cars"]) else profile
             
+            # 3. Anchor-Shift Logic
             existing_keys = sorted([int(k) for k in garage.keys() if k.isdigit()])
             last_id = existing_keys[-1] if existing_keys else 1000
             
+            # 4. SANITIZE CAR DATA: Extract a copy and pop non-game metadata to prevent login crashes!
+            injected_car = dict(car_db[car_id])
+            injected_car.pop("__desc_id", None)
+            injected_car.pop("image_url", None)
+            
             pushed_id = str(last_id + 1)
             garage[pushed_id] = garage.pop(str(last_id))
-            garage[str(last_id)] = car_db[car_id]
+            garage[str(last_id)] = injected_car # Inject clean, sanitized car
             
+            # 5. Strict orjson Encryption (Modular helper) and Upload
             cont["compressed_data"] = encrypt_payload_strict(profile)
             cont["lastSyncTime"] = int(time.time())
             
