@@ -15,10 +15,10 @@ Expected Output Format:
 async def analyze_receipt_with_external_api(image_url: str) -> dict:
     """
     Downloads the receipt image, converts it to base64, and sends it 
-    directly to official Google Gemini 2.0 Flash in AI Studio.
+    directly to official Google Gemini using headers matching your curl request.
     """
     try:
-        # 1. Download the image bytes locally on Render
+        # 1. Download the image bytes
         async with httpx.AsyncClient() as client:
             img_response = await client.get(image_url)
             if img_response.status_code != 200:
@@ -29,8 +29,14 @@ async def analyze_receipt_with_external_api(image_url: str) -> dict:
         # 2. Encode image to Base64
         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
 
-        # 3. Call Official Google Gemini 2.0 Flash REST API
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        # 3. Call Official Google Gemini 1.5 Flash REST API
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+        
+        # Matches your curl headers exactly
+        headers = {
+            "Content-Type": "application/json",
+            "X-goog-api-key": GEMINI_API_KEY
+        }
         
         payload = {
             "contents": [
@@ -49,20 +55,20 @@ async def analyze_receipt_with_external_api(image_url: str) -> dict:
                 }
             ],
             "generationConfig": {
-                "responseMimeType": "application/json" # Tells Gemini to strictly reply in JSON
+                "responseMimeType": "application/json" # Enforces strict JSON output
             }
         }
 
         print("[Gemini API] Scanning receipt directly via Google AI Studio...")
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload)
+            response = await client.post(url, json=payload, headers=headers)
             if response.status_code != 200:
                 print(f"❌ Gemini API Error ({response.status_code}): {response.text}")
                 return None
                 
             data = response.json()
             
-            # Extract text from Google's response payload
+            # Extract the generated JSON text from Gemini's response
             ai_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
             return clean_and_parse_json(ai_text)
 
