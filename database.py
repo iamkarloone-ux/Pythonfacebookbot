@@ -19,7 +19,6 @@ async def init_db():
     async with pool.acquire() as conn:
         print("Synchronizing Database Schema...")
         async with conn.transaction():
-            # ... (Rest of the schema table creations)
             # 1. Core Tables
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS admins (
@@ -79,6 +78,16 @@ async def init_db():
                 )
             """)
             
+            # Reseller License Table
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS licenses (
+                    key TEXT PRIMARY KEY, 
+                    expires_at TIMESTAMPTZ NOT NULL, 
+                    assigned_to TEXT,
+                    is_active BOOLEAN DEFAULT TRUE
+                )
+            """)
+            
             # 2. Settings & Users
             await conn.execute("""CREATE TABLE IF NOT EXISTS paused_users (user_id TEXT PRIMARY KEY)""")
             await conn.execute("""CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)""")
@@ -88,7 +97,7 @@ async def init_db():
             """)
             await conn.execute("""CREATE TABLE IF NOT EXISTS users (psid TEXT PRIMARY KEY, lang TEXT DEFAULT 'en')""")
 
-        # 3. Graceful Alterations (for existing databases migrating to this new schema)
+        # 3. Graceful Alterations
         try:
             await conn.execute('ALTER TABLE mods DROP COLUMN x_coordinate')
             await conn.execute('ALTER TABLE mods DROP COLUMN y_coordinate')
@@ -106,7 +115,6 @@ async def init_db():
         print('✅ Database synchronized successfully.')
 
 # --- AUTOMATION & JOB TRACKING ---
-# Used primarily as a history log now, since cloning happens instantly.
 
 async def create_account_creation_job(user_psid: str, email: str, password: str, mod_id: int, lang: str = 'en') -> int:
     async with pool.acquire() as conn:
@@ -234,7 +242,6 @@ async def add_reference(ref: str, user_id: str, mod_id: int) -> int:
             VALUES ($1, $2, $3, $4) ON CONFLICT (ref_number) DO NOTHING
         """, ref, user_id, mod_id, claims_max)
         
-        # asyncpg execute returns a status tag like 'INSERT 0 1'. If it's 'INSERT 0 0', it was a duplicate.
         if res == 'INSERT 0 0':
             raise Exception('Duplicate reference number')
             
@@ -284,7 +291,6 @@ async def get_all_references():
 async def delete_reference(ref_number: str) -> int:
     async with pool.acquire() as conn:
         res = await conn.execute('DELETE FROM "references" WHERE ref_number = $1', ref_number)
-        # res looks like 'DELETE 1' or 'DELETE 0'
         return int(res.split(' ')[1])
 
 async def get_available_account(mod_id: int):
@@ -366,3 +372,43 @@ async def get_sales_statistics(period: str):
     async with pool.acquire() as conn:
         rows = await conn.fetch(query)
         return [dict(row) for row in rows]
+
+# --- LICENSE SYSTEM Helper Query Functions ---
+
+async def add_license_key(key: str, days: int, assigned_to: str):
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO licenses (key, expires_at, assigned_to) 
+            VALUES ($1, CURRENT_TIMESTAMP + ($2 * INTERVAL '1 day'), $3)
+            ON CONFLICT (key) DO UPDATE SET 
+                expires_at = CURRENT_TIMESTAMP + ($2 * INTERVAL '1 day'), 
+                assigned_to = EXCLUDED.assigned_to, 
+                is_active = TRUE
+        """, key, days, assigned_to)
+
+async def get_all_licenses():
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT key, expires_at, assigned_to, is_active,
+                   EXTRACT(epoch FROM (expires_at - NOW())) / 86400 AS days_remaining
+            FROM licenses
+            ORDER BY expires_at DESC
+        """)
+        return [dict(row) for row in rows]
+
+async def deactivate_license_key(key: str) -> int:
+    async with pool.acquire() as conn:
+        res = await conn.execute("DELETE FROM licenses WHERE key = $1", key)
+        return int(res.split(' ')[1])
+
+async def verify_license_key(key: str) -> dict:
+    if not pool:
+        return None
+    async with pool.acquire() as conn:
+        query = """
+            SELECT expires_at 
+            FROM licenses 
+            WHERE key = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
+        """
+        row = await conn.fetchrow(query, key)
+        return dict(row) if row else None
