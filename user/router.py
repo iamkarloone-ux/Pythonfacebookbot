@@ -88,8 +88,15 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
         elif state == 'awaiting_reseller_key': return await reseller_tool.handle_reseller_key(sender_psid, received_text, user_lang)
         elif state == 'awaiting_reseller_target_email': return await reseller_tool.handle_reseller_email(sender_psid, received_text, user_lang)
         elif state == 'awaiting_reseller_target_pass': return await reseller_tool.handle_reseller_password(sender_psid, received_text, user_lang)
-        elif state == 'awaiting_reseller_target_devid': return await reseller_tool.handle_reseller_devid(sender_psid, received_text, user_lang)
         elif state == 'awaiting_reseller_patch_choice': return await reseller_tool.handle_reseller_patch_choice(sender_psid, lower_text, user_lang)
+        
+        # Reseller Custom Resource Inputs
+        elif state == 'awaiting_reseller_custom_silver': return await reseller_tool.handle_reseller_custom_silver(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_reseller_custom_gold': return await reseller_tool.handle_reseller_custom_gold(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_reseller_custom_xp': return await reseller_tool.handle_reseller_custom_xp(sender_psid, received_text, user_lang)
+        
+        # Reseller Car ID Input
+        elif state == 'awaiting_reseller_car_id': return await reseller_tool.handle_reseller_car_id(sender_psid, received_text, user_lang)
         
         # Text instead of image fallback
         if state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod', 'awaiting_receipt_for_car_injector']:
