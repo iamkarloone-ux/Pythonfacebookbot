@@ -248,6 +248,17 @@ async def handle_reseller_custom_xp(sender_psid: str, text: str, user_lang: str)
         except ValueError:
             return await messenger_api.send_text(sender_psid, "❌ Please enter a valid integer or tap Skip:")
         
+    # Validation Check: If all Silver, Gold, and XP are skipped (all are 0), cancel the patch and loop back to menu
+    if state.get('silver_val', 0.0) == 0.0 and state.get('gold_val', 0) == 0 and xp == 0:
+        await messenger_api.send_text(sender_psid, "⚠️ All resources skipped. Patch cancelled.")
+        
+        # Clean custom form data from the state dictionary
+        state.pop("silver_val", None)
+        state.pop("gold_val", None)
+        state.pop("state", None)
+        state.pop("timestamp", None)
+        return await show_reseller_patch_menu(sender_psid, user_lang, state)
+
     asyncio.create_task(
         execute_reseller_patch_task(
             user_psid=sender_psid,
@@ -485,19 +496,8 @@ async def execute_reseller_patch_task(
             )
             await messenger_api.send_text(user_psid, success_msg)
             
-            # --- PERSISTENCE: Loop reseller menu back on completion ---
-            follow_up_msg = "Type Menu to go back Reseller MENU?"
-            replies = [
-                {"title": "🔄 Apply Another Patch", "payload": "patch_again"},
-                {"title": "👥 Switch Account", "payload": "reseller_switch_account"},
-                {"title": "🚪 Exit to Main Menu", "payload": "menu"}
-            ]
-            await messenger_api.send_quick_replies(user_psid, follow_up_msg, replies)
-            
-            # Carry forwarding state context safely
-            state_data.pop("state", None)
-            state_data.pop("timestamp", None)
-            state_manager.set_user_state(user_psid, 'awaiting_reseller_post_patch_choice', **state_data)
+            # --- PERSISTENCE: Loop reseller menu back on completion automatically ---
+            await show_reseller_patch_menu(user_psid, user_lang, state_data)
             
     except Exception as e:
         print(f"❌ Reseller Patcher Task failed for {user_psid}: {e}")
