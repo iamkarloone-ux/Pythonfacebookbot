@@ -269,7 +269,7 @@ async def execute_reseller_patch_task(
             
             summary_actions = []
 
-            # 3. Process Mod Requests (Strict Formatting Applied)
+            # 3. Process Mod Requests (Strict Formatting)
             
             # --- Modification: Ban Safe Pack 1 (10M Silver + 6k Gold) ---
             if action == 'safe_1':
@@ -343,15 +343,19 @@ async def execute_reseller_patch_task(
                 car_name = car_db[target_car_id].get("__desc_id", f"Car {target_car_id}")
                 summary_actions.append(f"🚗 Injected untouched {car_name} (ID: {target_car_id}) into garage slot {last_id}")
 
-            # 4. Securely Encrypt and Upload back to CarX Server
+            # 4. Strictly synchronize internal lastSyncTime (matches resourcestool.py!)
+            current_time = int(time.time())
+            profile["lastSyncTime"] = current_time
+
+            # 5. Securely Encrypt and Upload back to CarX Server
             cont["compressed_data"] = encrypt_payload_strict_local(profile)
-            cont["lastSyncTime"] = int(time.time())
+            cont["lastSyncTime"] = current_time
             
             r_up = await client.post(f"{BASE_SYNC}/profiles", json=cont, headers=h)
             if r_up.status_code != 200:
                 raise Exception(f"Upload rejected by CarX sync server: {r_up.text}")
                 
-            # 5. Success delivery notification
+            # 6. Success delivery notification
             success_msg = (
                 "🎉 *PATCHING COMPLETED SUCCESSFULLY!* 🎉\n\n"
                 f"📧 Account: `{email}`\n"
