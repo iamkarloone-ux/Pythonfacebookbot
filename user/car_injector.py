@@ -91,34 +91,34 @@ async def get_profile_injector(client, email, pwd, dev, carx="", is_target=False
         return {"compressed_data": encrypt_payload_strict({"resources":{"soft":{"amount":0}}})}, h
     return cont, h
 
-async def load_db_data_async() -> dict:
+async def load_db_data_async() -> tuple:
     """
-    Downloads both carlist.json (raw game data) and car_images.json (simple names/images)
-    from Supabase Storage and merges them dynamically in real-time.
+    Downloads raw carlist.json and simple car_images.json.
+    Returns them as a tuple (car_registry, car_maps) without mutating any keys!
     """
     try:
         async with httpx.AsyncClient() as client:
-            # 1. Download the raw game data file
+            # 1. Download raw game data
             response_list = await client.get(CAR_LIST_URL)
             if response_list.status_code != 200:
                 print(f"❌ Failed to download carlist.json: {response_list.status_code}")
-                return {}
+                return {}, {}
             
             content = response_list.text.strip()
             if not content.startswith("{"): content = "{" + content
             if not content.endswith("}"): content = content + "}"
             raw_car_data = json.loads(content)
 
-            # 2. Download the simple image mapping file
+            # 2. Download simple name/image mapping
             car_maps = {}
             response_maps = await client.get(CAR_IMAGES_URL)
             if response_maps.status_code == 200:
                 try:
                     car_maps = response_maps.json()
                 except Exception:
-                    print("⚠️ Warning: Failed to parse car_images.json. Check its syntax.")
+                    print("⚠️ Warning: Failed to parse car_images.json.")
 
-            # 3. Scan and extract raw cars from the massive game file
+            # 3. Scan and extract pristine, raw cars from the massive game file
             car_registry = {}
             def scan(d):
                 if isinstance(d, dict):
@@ -130,18 +130,11 @@ async def load_db_data_async() -> dict:
                     for item in d: scan(item)
             
             scan(raw_car_data)
-            
-            # 4. Merge the simple display names and image URLs into the extracted game cars
-            for car_id in list(car_registry.keys()):
-                mapping = car_maps.get(car_id, {})
-                car_registry[car_id]["__desc_id"] = mapping.get("name", f"Car ID {car_id}")
-                car_registry[car_id]["image_url"] = mapping.get("image_url", "N/A")
-                
-            return car_registry
+            return car_registry, car_maps
             
     except Exception as e:
-        print(f"❌ Error loading dynamic merged car data: {e}")
-        return {}
+        print(f"❌ Error loading dynamic car data: {e}")
+        return {}, {}
 
 # --- USER FLOWS ---
 
@@ -163,7 +156,7 @@ async def handle_car_injector_password(sender_psid: str, text: str, user_lang: s
     state = state_manager.get_user_state(sender_psid)
     password = text.strip()
     
-    car_db = await load_db_data_async()
+    car_db, car_maps = await load_db_data_async()
     if not car_db:
         await messenger_api.send_text(sender_psid, "❌ No cars found. Please contact the admin.")
         state_manager.clear_user_state(sender_psid)
@@ -171,11 +164,13 @@ async def handle_car_injector_password(sender_psid: str, text: str, user_lang: s
 
     await messenger_api.send_text(sender_psid, lang.get_text('car_inject_catalog_header', user_lang))
 
+    # We read display name and image dynamically in-memory without altering the raw car_db
     for car_id, car_data in car_db.items():
-        desc = car_data.get("__desc_id", f"Car ID {car_id}")
-        image_url = car_data.get("image_url", "N/A")
+        mapping = car_maps.get(car_id, {})
+        display_name = mapping.get("name", f"Car ID {car_id}")
+        image_url = mapping.get("image_url", "N/A")
         
-        car_info = f"🚗 *Car ID: {car_id}*\nModel: {desc}\n💰 Price: 150 PHP\nSafe Injection: Yes"
+        car_info = f"🚗 *Car ID: {car_id}*\nModel: {display_name}\n💰 Price: 150 PHP\nSafe Injection: Yes"
         await messenger_api.send_text(sender_psid, car_info)
         
         if image_url and image_url != "N/A":
@@ -197,7 +192,7 @@ async def handle_car_injector_password(sender_psid: str, text: str, user_lang: s
 async def handle_car_selection(sender_psid: str, text: str, user_lang: str):
     state = state_manager.get_user_state(sender_psid)
     car_id = text.strip()
-    car_db = await load_db_data_async()
+    car_db, _ = await load_db_data_async()
     
     if car_id not in car_db:
         return await messenger_api.send_text(sender_psid, lang.get_text('manual_entry_invalid_mod', user_lang))
@@ -270,7 +265,7 @@ async def handle_car_receipt_analysis(sender_psid: str, analysis: dict, user_lan
 
 async def execute_car_injection(user_psid: str, email: str, password: str, car_id: str, user_lang: str):
     tgt_dev = uuid.uuid4().hex
-    car_db = await load_db_data_async()
+    car_db, _ = await load_db_data_async()
     
     try:
         await messenger_api.send_text(user_psid, lang.get_text('car_inject_started_user', user_lang))
@@ -278,7 +273,7 @@ async def execute_car_injection(user_psid: str, email: str, password: str, car_i
         async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
             client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
             
-            # 1. Fetch Target Profile
+            # 1. Fetch Target Profile using our local isolated function
             cont, h = await get_profile_injector(client, email, password, tgt_dev, carx="", is_target=False)
             profile = decrypt_payload(cont["compressed_data"])
             
@@ -289,13 +284,13 @@ async def execute_car_injection(user_psid: str, email: str, password: str, car_i
             existing_keys = sorted([int(k) for k in garage.keys() if k.isdigit()])
             last_id = existing_keys[-1] if existing_keys else 1000
             
-            # 4. SANITIZE CAR DATA: Keep __desc_id, ONLY pop the custom image_url metadata!
-            injected_car = dict(car_db[car_id])
-            injected_car.pop("image_url", None) # Deletes only our custom picture key
+            # 4. INJECT PRISTINE CAR DATA: We inject the clean, raw car dict directly (just like carinject1.py)
+            # Since we kept display metadata separate in the display loop, the raw car_db is completely untouched!
+            injected_car = car_db[car_id]
             
             pushed_id = str(last_id + 1)
             garage[pushed_id] = garage.pop(str(last_id))
-            garage[str(last_id)] = injected_car # Inject pristine car data
+            garage[str(last_id)] = injected_car # Inject untouched, compliant car data
             
             # 5. Strict Standard Encryption and Upload
             cont["compressed_data"] = encrypt_payload_strict(profile)
