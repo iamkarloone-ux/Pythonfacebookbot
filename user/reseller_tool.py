@@ -187,7 +187,8 @@ async def handle_reseller_custom_gold(sender_psid: str, text: str, user_lang: st
     state.pop("timestamp", None)
     
     await messenger_api.send_text(sender_psid, "📈 Enter the amount of XP to add (e.g. 10000):")
-    state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_xp', silver_val=state['silver_val'], gold_val=gold, **state)
+    # FIX: Do not pass silver_val explicitly since it's already inside **state
+    state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_xp', gold_val=gold, **state)
 
 async def handle_reseller_custom_xp(sender_psid: str, text: str, user_lang: str):
     state = state_manager.get_user_state(sender_psid)
