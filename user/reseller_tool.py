@@ -30,7 +30,8 @@ async def prompt_reseller_tool(sender_psid: str, user_lang: str):
         "🔑 *Reseller Patcher Tool* 🔑\n\n"
         "To access this tool, please enter your active Reseller License Key.\n\n"
         "Don't have a key? Message the developer to purchase access for 600 PHP/Month:\n"
-        "💬 m.me/lark.abalunan.1"
+        "💬 m.me/lark.abalunan.1\n\n"
+        "👉 Type 'Menu' to cancel and go back."
     )
     await messenger_api.send_quick_replies(sender_psid, msg, replies)
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_key', lang=user_lang)
@@ -44,13 +45,14 @@ async def handle_reseller_key(sender_psid: str, text: str, user_lang: str):
         msg = (
             "❌ Invalid or Expired License Key.\n\n"
             "Please make sure your key is typed correctly. To buy a subscription (600 PHP/Month), contact:\n"
-            "💬 m.me/lark.abalunan.1"
+            "💬 m.me/lark.abalunan.1\n\n"
+            "👉 Type 'Menu' to cancel."
         )
         await messenger_api.send_quick_replies(sender_psid, msg, replies)
         return
 
     await messenger_api.send_text(sender_psid, "✅ License verified successfully!")
-    await messenger_api.send_quick_replies(sender_psid, "📧 Enter the target CarX Street account Email:", replies)
+    await messenger_api.send_quick_replies(sender_psid, "📧 Enter the target CarX Street account Email:\n\n👉 Type 'Menu' to cancel.", replies)
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_target_email', license_key=key, lang=user_lang)
 
 async def handle_reseller_email(sender_psid: str, text: str, user_lang: str):
@@ -59,9 +61,9 @@ async def handle_reseller_email(sender_psid: str, text: str, user_lang: str):
     replies = [{"title": "⬅️ Back to Menu", "payload": "menu"}]
     
     if "@" not in email or "." not in email:
-        return await messenger_api.send_quick_replies(sender_psid, "❌ Invalid email format. Try again:", replies)
+        return await messenger_api.send_quick_replies(sender_psid, "❌ Invalid email format. Try again:\n\n👉 Type 'Menu' to cancel.", replies)
         
-    await messenger_api.send_quick_replies(sender_psid, "🔐 Enter the target account Password:", replies)
+    await messenger_api.send_quick_replies(sender_psid, "🔐 Enter the target account Password:\n\n👉 Type 'Menu' to cancel.", replies)
     state_manager.set_user_state(
         sender_psid, 
         'awaiting_reseller_target_pass', 
@@ -83,15 +85,15 @@ async def show_reseller_patch_menu(sender_psid: str, user_lang: str, state: dict
     msg = (
         "⚙️ *Reseller Patcher Action Menu* ⚙️\n"
         f"📧 Target: `{state['target_email']}`\n\n"
-        "Choose an action to apply:\n\n"
-        "1️⃣ : Ban-Safe Pack 1 (10M Silver + 6k Gold)\n"
-        "2️⃣ : Ban-Safe Pack 2 (6M Silver + 1k Gold)\n"
-        "3️⃣ : Custom Resources (Silver, Gold, XP - with Skips)\n"
-        "4️⃣ : Max Nitro (All or Single Vehicle)\n"
-        "5️⃣ : Map Region Unlocker (All Areas)\n"
-        "6️⃣ : Inject Custom Car\n"
-        "7️⃣ : 👥 Use Different Account\n"
-        "8️⃣ : 🚪 Exit to Main Menu"
+        "Choose an action to apply:\n"
+        "👉 Type *1* : Ban-Safe Pack 1 (10M Silver + 6k Gold)\n"
+        "👉 Type *2* : Ban-Safe Pack 2 (6M Silver + 1k Gold)\n"
+        "👉 Type *3* : Custom Resources (Silver, Gold, XP)\n"
+        "👉 Type *4* : Max Nitro (All or Single Vehicle)\n"
+        "👉 Type *5* : Map Region Unlocker (All Areas)\n"
+        "👉 Type *6* : Inject Custom Car\n"
+        "👉 Type *7* : 👥 Use Different Account\n"
+        "👉 Type *8* : 🚪 Exit to Main Menu"
     )
     
     replies = [
@@ -140,18 +142,21 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
         
     elif action == 'switch_account':
         replies = [{"title": "⬅️ Back", "payload": "patch_again"}]
-        await messenger_api.send_quick_replies(sender_psid, "📧 Enter the target CarX Street account Email:", replies)
+        await messenger_api.send_quick_replies(sender_psid, "📧 Enter the target CarX Street account Email:\n\n👉 Type 'Menu' to return.", replies)
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_target_email', license_key=state['license_key'], lang=user_lang)
         
     elif action == 'custom':
         replies = [{"title": "Skip ➡️", "payload": "skip_silver"}]
-        await messenger_api.send_quick_replies(sender_psid, "💰 Enter the exact amount of Silver to add (or tap Skip):", replies)
+        await messenger_api.send_quick_replies(sender_psid, "💰 Enter the exact amount of Silver to add:\n\n👉 Type 'skip' to skip this resource.", replies)
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_silver', **state)
         
     elif action == 'nitro_menu':
         msg = (
             "⚡ *Nitro Modification Menu* ⚡\n\n"
-            "Do you want to max out nitro on ALL owned cars, or choose a single car?"
+            "Do you want to max out nitro on ALL owned cars, or choose a single car?\n\n"
+            "👉 Type *1* : Max Nitro on ALL Cars\n"
+            "👉 Type *2* : Select a Single Car\n"
+            "👉 Type *Menu* : Return to Patcher Menu"
         )
         replies = [
             {"title": "⚡ Max All Cars", "payload": "nitro_all"},
@@ -180,7 +185,7 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
                     await asyncio.sleep(0.2)
                     
         replies = [{"title": "⬅️ Cancel", "payload": "patch_again"}]
-        await messenger_api.send_quick_replies(sender_psid, "🚗 Enter the exact Car ID to inject (e.g. 1045):", replies)
+        await messenger_api.send_quick_replies(sender_psid, "🚗 Enter the exact Car ID to inject (e.g. 1045):\n\n👉 Type 'Menu' to cancel.", replies)
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_car_id', **state)
         
     else:
@@ -208,13 +213,13 @@ async def handle_reseller_custom_silver(sender_psid: str, text: str, user_lang: 
         try:
             silver = float(text.strip().replace(',', ''))
         except ValueError:
-            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid number for Silver:")
+            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid number for Silver:\n\n👉 Type 'skip' to skip.")
         
     state.pop("state", None)
     state.pop("timestamp", None)
     
     replies = [{"title": "Skip ➡️", "payload": "skip_gold"}]
-    await messenger_api.send_quick_replies(sender_psid, "✨ Enter the exact amount of Gold to add (or tap Skip):", replies)
+    await messenger_api.send_quick_replies(sender_psid, "✨ Enter the exact amount of Gold to add:\n\n👉 Type 'skip' to skip.", replies)
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_gold', silver_val=silver, **state)
 
 async def handle_reseller_custom_gold(sender_psid: str, text: str, user_lang: str):
@@ -227,13 +232,13 @@ async def handle_reseller_custom_gold(sender_psid: str, text: str, user_lang: st
         try:
             gold = int(text.strip().replace(',', ''))
         except ValueError:
-            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid integer or tap Skip:")
+            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid integer for Gold:\n\n👉 Type 'skip' to skip.")
         
     state.pop("state", None)
     state.pop("timestamp", None)
     
     replies = [{"title": "Skip ➡️", "payload": "skip_xp"}]
-    await messenger_api.send_quick_replies(sender_psid, "📈 Enter the amount of XP to add (or tap Skip):", replies)
+    await messenger_api.send_quick_replies(sender_psid, "📈 Enter the amount of XP to add:\n\n👉 Type 'skip' to skip.", replies)
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_xp', gold_val=gold, **state)
 
 async def handle_reseller_custom_xp(sender_psid: str, text: str, user_lang: str):
@@ -246,7 +251,7 @@ async def handle_reseller_custom_xp(sender_psid: str, text: str, user_lang: str)
         try:
             xp = int(text.strip().replace(',', ''))
         except ValueError:
-            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid integer or tap Skip:")
+            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid integer for XP:\n\n👉 Type 'skip' to skip.")
         
     # Validation Check: If all Silver, Gold, and XP are skipped (all are 0), cancel the patch and loop back to menu
     if state.get('silver_val', 0.0) == 0.0 and state.get('gold_val', 0) == 0 and xp == 0:
@@ -312,7 +317,7 @@ async def handle_reseller_nitro_choice(sender_psid: str, text: str, user_lang: s
                 for c_id in owned_cars:
                     desc_id = garage[c_id].get("__desc_id", "Unknown Vehicle")
                     msg += f"- ID: `{c_id}` : {desc_id}\n"
-                msg += "\n👉 Please enter the exact Car ID from the list to apply Max Nitro to:"
+                msg += "\n👉 Please enter the exact Car ID from the list to apply Max Nitro to:\n\n👉 Type 'Menu' to cancel."
                 
                 replies = [{"title": "⬅️ Cancel", "payload": "patch_again"}]
                 await messenger_api.send_quick_replies(sender_psid, msg, replies)
@@ -331,6 +336,9 @@ async def handle_reseller_single_nitro_id(sender_psid: str, text: str, user_lang
     state = state_manager.get_user_state(sender_psid)
     car_id = text.strip()
     
+    if car_id.lower() == 'menu':
+        return await show_reseller_patch_menu(sender_psid, user_lang, state)
+
     asyncio.create_task(
         execute_reseller_patch_task(
             user_psid=sender_psid,
@@ -352,7 +360,7 @@ async def handle_reseller_car_id(sender_psid: str, text: str, user_lang: str):
     
     car_db, _ = await load_db_data_async()
     if car_id not in car_db:
-        return await messenger_api.send_text(sender_psid, "❌ That Car ID is not available in the database. Please check and try again:")
+        return await messenger_api.send_text(sender_psid, "❌ That Car ID is not available in the database. Please check and try again:\n\n👉 Type 'Menu' to cancel.")
         
     asyncio.create_task(
         execute_reseller_patch_task(
