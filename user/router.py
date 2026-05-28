@@ -32,13 +32,17 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
         await db.add_user(sender_psid, user_lang)
         return await menu.show_user_menu(sender_psid, user_lang)
 
-    # 3. Handle 'Menu' Cancel Command
+    # 3. Handle 'Menu' Cancel Command (Isolated for Active Resellers)
     state_obj = state_manager.get_user_state(sender_psid)
     state = state_obj["state"] if state_obj else None
 
     if lower_text == 'menu':
-        state_manager.clear_user_state(sender_psid)
-        return await menu.show_user_menu(sender_psid, user_lang)
+        # If active in a reseller session, return to Reseller Menu instead of exiting
+        if state_obj and state_obj["state"].startswith("awaiting_reseller_") and state_obj.get("target_email") and state_obj.get("target_pass"):
+            return await reseller_tool.show_reseller_patch_menu(sender_psid, user_lang, state_obj)
+        else:
+            state_manager.clear_user_state(sender_psid)
+            return await menu.show_user_menu(sender_psid, user_lang)
 
     # 4. Handle Image Attachments (Receipts)
     message = event.get("message", {})
@@ -141,4 +145,4 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
     if action:
         await action()
     elif received_text and not message.get("sticker_id"):
-        await menu.show_user_menu(sender_psid, user_lang) 
+        await menu.show_user_menu(sender_psid, user_lang)
