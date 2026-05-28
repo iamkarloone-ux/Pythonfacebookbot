@@ -3,12 +3,26 @@ import asyncio
 import time
 import uuid
 import httpx
+import json
+import base64
+import gzip
+import orjson
 import database as db
 import state_manager
 import messenger_api
 import language_manager as lang
 from config import ADMIN_ID
-from user.car_injector import get_profile_injector, decrypt_payload, encrypt_payload_strict, BASE_SYNC, load_db_data_async
+from user.car_injector import get_profile_injector, decrypt_payload, BASE_SYNC, load_db_data_async
+
+# --- LOCAL ENCRYPTION UTILITIES ---
+
+def encrypt_payload_strict_local(profile_dict):
+    """
+    STRICT ENCRYPTION: Uses standard Python json.dumps with zero whitespaces.
+    Guarantees compatibility with the Unity client to prevent loading screen hangs.
+    """
+    json_str = json.dumps(profile_dict, separators=(',', ':'))
+    return "l84l" + base64.b64encode(b"\x00" + gzip.compress(json_str.encode("utf-8"))).decode("utf-8")
 
 # --- USER FLOWS ---
 
@@ -187,7 +201,6 @@ async def handle_reseller_custom_gold(sender_psid: str, text: str, user_lang: st
     state.pop("timestamp", None)
     
     await messenger_api.send_text(sender_psid, "📈 Enter the amount of XP to add (e.g. 10000):")
-    # FIX: Do not pass silver_val explicitly since it's already inside **state
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_xp', gold_val=gold, **state)
 
 async def handle_reseller_custom_xp(sender_psid: str, text: str, user_lang: str):
@@ -251,33 +264,38 @@ async def execute_reseller_patch_task(
             cont, h = await get_profile_injector(client, email, password, dev_id, carx="", is_target=False)
             profile = decrypt_payload(cont["compressed_data"])
             
-            # 2. Locate Garage (Matched exactly to the working car_injector.py inline check)
+            # 2. Locate Garage
             garage = profile["cars"]["items"] if ("cars" in profile and "items" in profile["cars"]) else profile
             
             summary_actions = []
 
-            # 3. Process Mod Requests
+            # 3. Process Mod Requests (Strict Formatting Applied)
             
             # --- Modification: Ban Safe Pack 1 (10M Silver + 6k Gold) ---
             if action == 'safe_1':
                 res = profile.setdefault("resources", {})
-                res.setdefault("soft", {"amount": 0})["amount"] = res["soft"].get("amount", 0) + 10000000.0
-                res.setdefault("hard", {"amount": 0})["amount"] = res["hard"].get("amount", 0) + 6000
+                res["soft"] = {"amount": float(res.get("soft", {}).get("amount", 0.0)) + 10000000.0}
+                res["hard"] = {"amount": int(res.get("hard", {}).get("amount", 0)) + 6000}
+                res["experience"] = {"amount": int(res.get("experience", {}).get("amount", 0))}
+                profile["resources"] = res
                 summary_actions.append("💰 Applied Ban-Safe Pack 1 (+10M Silver, +6k Gold)")
 
             # --- Modification: Ban Safe Pack 2 (6M Silver + 1k Gold) ---
             elif action == 'safe_2':
                 res = profile.setdefault("resources", {})
-                res.setdefault("soft", {"amount": 0})["amount"] = res["soft"].get("amount", 0) + 6000000.0
-                res.setdefault("hard", {"amount": 0})["amount"] = res["hard"].get("amount", 0) + 1000
+                res["soft"] = {"amount": float(res.get("soft", {}).get("amount", 0.0)) + 6000000.0}
+                res["hard"] = {"amount": int(res.get("hard", {}).get("amount", 0)) + 1000}
+                res["experience"] = {"amount": int(res.get("experience", {}).get("amount", 0))}
+                profile["resources"] = res
                 summary_actions.append("💰 Applied Ban-Safe Pack 2 (+6M Silver, +1k Gold)")
 
             # --- Modification: Custom Input Values ---
             elif action == 'custom':
                 res = profile.setdefault("resources", {})
-                res.setdefault("soft", {"amount": 0})["amount"] = res["soft"].get("amount", 0) + custom_silver
-                res.setdefault("hard", {"amount": 0})["amount"] = res["hard"].get("amount", 0) + custom_gold
-                res.setdefault("experience", {"amount": 0})["amount"] = res["experience"].get("amount", 0) + custom_xp
+                res["soft"] = {"amount": float(res.get("soft", {}).get("amount", 0.0)) + float(custom_silver)}
+                res["hard"] = {"amount": int(res.get("hard", {}).get("amount", 0)) + int(custom_gold)}
+                res["experience"] = {"amount": int(res.get("experience", {}).get("amount", 0)) + int(custom_xp)}
+                profile["resources"] = res
                 summary_actions.append(f"💰 Custom Resources added: +{custom_silver:,.0f} Silver, +{custom_gold:,} Gold, +{custom_xp:,} XP")
 
             # --- Modification: Max Nitro (All cars) ---
@@ -326,7 +344,7 @@ async def execute_reseller_patch_task(
                 summary_actions.append(f"🚗 Injected untouched {car_name} (ID: {target_car_id}) into garage slot {last_id}")
 
             # 4. Securely Encrypt and Upload back to CarX Server
-            cont["compressed_data"] = encrypt_payload_strict(profile)
+            cont["compressed_data"] = encrypt_payload_strict_local(profile)
             cont["lastSyncTime"] = int(time.time())
             
             r_up = await client.post(f"{BASE_SYNC}/profiles", json=cont, headers=h)
