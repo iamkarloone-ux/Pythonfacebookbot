@@ -3,7 +3,6 @@ import asyncio
 import time
 import uuid
 import httpx
-import json
 import base64
 import gzip
 import orjson
@@ -14,15 +13,14 @@ import language_manager as lang
 from config import ADMIN_ID
 from user.car_injector import get_profile_injector, decrypt_payload, BASE_SYNC, load_db_data_async
 
-# --- LOCAL ENCRYPTION UTILITIES ---
+# --- LOCAL ENCRYPTION UTILITIES (ALIGNED TO ORIGINAL TOOL) ---
 
 def encrypt_payload_strict_local(profile_dict):
     """
-    STRICT ENCRYPTION: Uses standard Python json.dumps with zero whitespaces.
-    Guarantees compatibility with the Unity client to prevent loading screen hangs.
+    STRICT ENCRYPTION: Uses orjson to match the working resourcestool.py exactly.
     """
-    json_str = json.dumps(profile_dict, separators=(',', ':'))
-    return "l84l" + base64.b64encode(b"\x00" + gzip.compress(json_str.encode("utf-8"))).decode("utf-8")
+    json_bytes = orjson.dumps(profile_dict)
+    return "l84l" + base64.b64encode(b"\x00" + gzip.compress(json_bytes)).decode("utf-8")
 
 # --- USER FLOWS ---
 
@@ -269,32 +267,34 @@ async def execute_reseller_patch_task(
             
             summary_actions = []
 
-            # 3. Process Mod Requests (Strict Formatting)
+            # 3. Process Mod Requests (Preserving all original dict structures in-place)
+            res = profile.get("resources", {})
+            if "experience" not in res or not isinstance(res["experience"], dict):
+                res["experience"] = {"amount": 0}
+            current_xp = res["experience"].get("amount", 0)
             
             # --- Modification: Ban Safe Pack 1 (10M Silver + 6k Gold) ---
             if action == 'safe_1':
-                res = profile.setdefault("resources", {})
-                res["soft"] = {"amount": float(res.get("soft", {}).get("amount", 0.0)) + 10000000.0}
-                res["hard"] = {"amount": int(res.get("hard", {}).get("amount", 0)) + 6000}
-                res["experience"] = {"amount": int(res.get("experience", {}).get("amount", 0))}
+                res.setdefault("soft", {"amount": 0.0})["amount"] += 10000000.0
+                res.setdefault("hard", {"amount": 0})["amount"] += 6000
                 profile["resources"] = res
                 summary_actions.append("💰 Applied Ban-Safe Pack 1 (+10M Silver, +6k Gold)")
 
             # --- Modification: Ban Safe Pack 2 (6M Silver + 1k Gold) ---
             elif action == 'safe_2':
-                res = profile.setdefault("resources", {})
-                res["soft"] = {"amount": float(res.get("soft", {}).get("amount", 0.0)) + 6000000.0}
-                res["hard"] = {"amount": int(res.get("hard", {}).get("amount", 0)) + 1000}
-                res["experience"] = {"amount": int(res.get("experience", {}).get("amount", 0))}
+                res.setdefault("soft", {"amount": 0.0})["amount"] += 6000000.0
+                res.setdefault("hard", {"amount": 0})["amount"] += 1000
                 profile["resources"] = res
                 summary_actions.append("💰 Applied Ban-Safe Pack 2 (+6M Silver, +1k Gold)")
 
             # --- Modification: Custom Input Values ---
             elif action == 'custom':
-                res = profile.setdefault("resources", {})
-                res["soft"] = {"amount": float(res.get("soft", {}).get("amount", 0.0)) + float(custom_silver)}
-                res["hard"] = {"amount": int(res.get("hard", {}).get("amount", 0)) + int(custom_gold)}
-                res["experience"] = {"amount": int(res.get("experience", {}).get("amount", 0)) + int(custom_xp)}
+                if custom_silver:
+                    res.setdefault("soft", {"amount": 0.0})["amount"] += float(custom_silver)
+                if custom_gold:
+                    res.setdefault("hard", {"amount": 0})["amount"] += int(custom_gold)
+                if custom_xp:
+                    res["experience"]["amount"] = current_xp + int(custom_xp)
                 profile["resources"] = res
                 summary_actions.append(f"💰 Custom Resources added: +{custom_silver:,.0f} Silver, +{custom_gold:,} Gold, +{custom_xp:,} XP")
 
@@ -343,13 +343,11 @@ async def execute_reseller_patch_task(
                 car_name = car_db[target_car_id].get("__desc_id", f"Car {target_car_id}")
                 summary_actions.append(f"🚗 Injected untouched {car_name} (ID: {target_car_id}) into garage slot {last_id}")
 
-            # 4. Strictly synchronize internal lastSyncTime (matches resourcestool.py!)
-            current_time = int(time.time())
-            profile["lastSyncTime"] = current_time
+            # 4. Strictly synchronize internal lastSyncTime (matches original script!)
+            profile["lastSyncTime"] = int(time.time())
 
             # 5. Securely Encrypt and Upload back to CarX Server
             cont["compressed_data"] = encrypt_payload_strict_local(profile)
-            cont["lastSyncTime"] = current_time
             
             r_up = await client.post(f"{BASE_SYNC}/profiles", json=cont, headers=h)
             if r_up.status_code != 200:
