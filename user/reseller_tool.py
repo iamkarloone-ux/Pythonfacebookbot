@@ -486,7 +486,7 @@ async def execute_reseller_patch_task(
             await messenger_api.send_text(user_psid, success_msg)
             
             # --- PERSISTENCE: Loop reseller menu back on completion ---
-            follow_up_msg = "What would you like to do next with this session?"
+            follow_up_msg = "Type Menu to go back Reseller MENU?"
             replies = [
                 {"title": "🔄 Apply Another Patch", "payload": "patch_again"},
                 {"title": "👥 Switch Account", "payload": "reseller_switch_account"},
