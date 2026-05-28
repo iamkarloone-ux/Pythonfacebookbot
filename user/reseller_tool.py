@@ -109,7 +109,6 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
     
     action = choice_map.get(choice)
     if not action:
-        # Re-display menu on invalid choice
         replies = [
             {"title": "1️⃣ Safe Pack 1 (10M/6k)", "payload": "patch_safe_1"},
             {"title": "2️⃣ Safe Pack 2 (6M/1k)", "payload": "patch_safe_2"},
@@ -122,7 +121,6 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
         await messenger_api.send_quick_replies(sender_psid, "❌ Invalid choice. Please select from the menu:", replies)
         return
         
-    # Clean the state dictionary to prevent unpacking duplicate parameters (avoiding TypeError)
     state.pop("state", None)
     state.pop("timestamp", None)
 
@@ -131,6 +129,24 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
         await messenger_api.send_text(sender_psid, "💰 Enter the exact amount of Silver to add (e.g. 5000000):")
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_silver', **state)
     elif action == 'inject_car':
+        # Load and display the catalog first
+        await messenger_api.send_text(sender_psid, "⏳ Downloading available vehicle inventory details...")
+        car_db, car_maps = await load_db_data_async()
+        
+        if car_db:
+            await messenger_api.send_text(sender_psid, "🏎️ *Available Cars for Injection* 🏎️\nHere are the cars we can inject into the garage right now:")
+            for car_id, car_data in car_db.items():
+                mapping = car_maps.get(car_id, {})
+                display_name = mapping.get("name", f"Car ID {car_id}")
+                image_url = mapping.get("image_url", "N/A")
+                
+                car_info = f"🚗 *Car ID: {car_id}*\nModel: {display_name}\n💰 Price: Reseller Free\nSafe Injection: Yes"
+                await messenger_api.send_text(sender_psid, car_info)
+                
+                if image_url and image_url != "N/A":
+                    await messenger_api.send_image(sender_psid, image_url)
+                    await asyncio.sleep(0.2)
+                    
         await messenger_api.send_text(sender_psid, "🚗 Enter the exact Car ID to inject (e.g. 1045):")
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_car_id', **state)
     else:
@@ -226,7 +242,6 @@ async def execute_reseller_patch_task(
     custom_silver: float = 0, custom_gold: int = 0, custom_xp: int = 0, target_car_id: str = ""
 ):
     try:
-        # Generate a secure random Device ID for this session
         dev_id = uuid.uuid4().hex
         
         async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
