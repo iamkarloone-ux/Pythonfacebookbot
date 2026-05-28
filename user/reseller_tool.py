@@ -63,21 +63,6 @@ async def handle_reseller_email(sender_psid: str, text: str, user_lang: str):
 async def handle_reseller_password(sender_psid: str, text: str, user_lang: str):
     state = state_manager.get_user_state(sender_psid)
     password = text.strip()
-    replies = [{"title": "⬅️ Back to Menu", "payload": "menu"}]
-    
-    await messenger_api.send_quick_replies(sender_psid, "📱 Enter the target account Device ID (DevID):", replies)
-    state_manager.set_user_state(
-        sender_psid, 
-        'awaiting_reseller_target_devid', 
-        license_key=state['license_key'], 
-        target_email=state['target_email'], 
-        target_pass=password, 
-        lang=user_lang
-    )
-
-async def handle_reseller_devid(sender_psid: str, text: str, user_lang: str):
-    state = state_manager.get_user_state(sender_psid)
-    dev_id = text.strip()
     
     msg = (
         "⚙️ *Select Patch Action* ⚙️\n\n"
@@ -105,8 +90,7 @@ async def handle_reseller_devid(sender_psid: str, text: str, user_lang: str):
         'awaiting_reseller_patch_choice', 
         license_key=state['license_key'], 
         target_email=state['target_email'], 
-        target_pass=state['target_pass'], 
-        target_devid=dev_id, 
+        target_pass=password, 
         lang=user_lang
     )
 
@@ -125,25 +109,32 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
     
     action = choice_map.get(choice)
     if not action:
-        return await handle_reseller_devid(sender_psid, state['target_devid'], user_lang)
+        # Re-display menu on invalid choice
+        replies = [
+            {"title": "1️⃣ Safe Pack 1 (10M/6k)", "payload": "patch_safe_1"},
+            {"title": "2️⃣ Safe Pack 2 (6M/1k)", "payload": "patch_safe_2"},
+            {"title": "3️⃣ Custom Resources", "payload": "patch_custom"},
+            {"title": "4️⃣ Max Nitro Only", "payload": "patch_nitro"},
+            {"title": "5️⃣ Map Unlock Only", "payload": "patch_maps"},
+            {"title": "6️⃣ Inject Custom Car", "payload": "patch_inject_car"},
+            {"title": "⬅️ Back to Menu", "payload": "menu"}
+        ]
+        await messenger_api.send_quick_replies(sender_psid, "❌ Invalid choice. Please select from the menu:", replies)
+        return
         
     # ROUTE ACTIONS
     if action == 'custom':
-        # Start the step-by-step custom inputs
         await messenger_api.send_text(sender_psid, "💰 Enter the exact amount of Silver to add (e.g. 5000000):")
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_silver', **state)
     elif action == 'inject_car':
-        # Ask for the Car ID
         await messenger_api.send_text(sender_psid, "🚗 Enter the exact Car ID to inject (e.g. 1045):")
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_car_id', **state)
     else:
-        # Static packages (safe_1, safe_2, nitro, maps) run immediately
         asyncio.create_task(
             execute_reseller_patch_task(
                 user_psid=sender_psid,
                 email=state['target_email'],
                 password=state['target_pass'],
-                dev_id=state['target_devid'],
                 action=action,
                 user_lang=user_lang
             )
@@ -185,7 +176,6 @@ async def handle_reseller_custom_xp(sender_psid: str, text: str, user_lang: str)
             user_psid=sender_psid,
             email=state['target_email'],
             password=state['target_pass'],
-            dev_id=state['target_devid'],
             action='custom',
             user_lang=user_lang,
             custom_silver=state['silver_val'],
@@ -211,7 +201,6 @@ async def handle_reseller_car_id(sender_psid: str, text: str, user_lang: str):
             user_psid=sender_psid,
             email=state['target_email'],
             password=state['target_pass'],
-            dev_id=state['target_devid'],
             action='inject_car',
             user_lang=user_lang,
             target_car_id=car_id
@@ -223,10 +212,13 @@ async def handle_reseller_car_id(sender_psid: str, text: str, user_lang: str):
 # --- BACKGROUND PATCH EXECUTION ENGINE ---
 
 async def execute_reseller_patch_task(
-    user_psid: str, email: str, password: str, dev_id: str, action: str, user_lang: str,
+    user_psid: str, email: str, password: str, action: str, user_lang: str,
     custom_silver: float = 0, custom_gold: int = 0, custom_xp: int = 0, target_car_id: str = ""
 ):
     try:
+        # Generate a secure random Device ID for this session
+        dev_id = uuid.uuid4().hex
+        
         async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
             client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
             
@@ -328,6 +320,6 @@ async def execute_reseller_patch_task(
         fail_msg = (
             "😔 *Patcher Task Failed.*\n\n"
             "An error occurred while connecting or uploading to the CarX servers.\n"
-            "Please double check your credentials / DevID and try again."
+            "Please double check your credentials and try again."
         )
         await messenger_api.send_text(user_psid, fail_msg)
