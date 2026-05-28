@@ -105,6 +105,10 @@ async def show_reseller_patch_menu(sender_psid: str, user_lang: str, state: dict
         {"title": "8️⃣ Exit Menu", "payload": "menu"}
     ]
     await messenger_api.send_quick_replies(sender_psid, msg, replies)
+    
+    # Clean state before saving to prevent duplicate parameter mapping (avoiding TypeError)
+    state.pop("state", None)
+    state.pop("timestamp", None)
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_patch_choice', **state)
 
 async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: str):
@@ -204,7 +208,7 @@ async def handle_reseller_custom_silver(sender_psid: str, text: str, user_lang: 
         try:
             silver = float(text.strip().replace(',', ''))
         except ValueError:
-            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid number or tap Skip:")
+            return await messenger_api.send_text(sender_psid, "❌ Please enter a valid number for Silver:")
         
     state.pop("state", None)
     state.pop("timestamp", None)
@@ -490,7 +494,7 @@ async def execute_reseller_patch_task(
             ]
             await messenger_api.send_quick_replies(user_psid, follow_up_msg, replies)
             
-            # Carry forwarding state context
+            # Carry forwarding state context safely
             state_data.pop("state", None)
             state_data.pop("timestamp", None)
             state_manager.set_user_state(user_psid, 'awaiting_reseller_post_patch_choice', **state_data)
