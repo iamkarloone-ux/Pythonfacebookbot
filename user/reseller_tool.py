@@ -122,6 +122,10 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
         await messenger_api.send_quick_replies(sender_psid, "❌ Invalid choice. Please select from the menu:", replies)
         return
         
+    # Clean the state dictionary to prevent unpacking duplicate parameters (avoiding TypeError)
+    state.pop("state", None)
+    state.pop("timestamp", None)
+
     # ROUTE ACTIONS
     if action == 'custom':
         await messenger_api.send_text(sender_psid, "💰 Enter the exact amount of Silver to add (e.g. 5000000):")
@@ -151,6 +155,9 @@ async def handle_reseller_custom_silver(sender_psid: str, text: str, user_lang: 
     except ValueError:
         return await messenger_api.send_text(sender_psid, "❌ Please enter a valid number for Silver:")
         
+    state.pop("state", None)
+    state.pop("timestamp", None)
+    
     await messenger_api.send_text(sender_psid, "✨ Enter the exact amount of Gold to add (e.g. 5000):")
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_gold', silver_val=silver, **state)
 
@@ -161,6 +168,9 @@ async def handle_reseller_custom_gold(sender_psid: str, text: str, user_lang: st
     except ValueError:
         return await messenger_api.send_text(sender_psid, "❌ Please enter a valid integer for Gold:")
         
+    state.pop("state", None)
+    state.pop("timestamp", None)
+    
     await messenger_api.send_text(sender_psid, "📈 Enter the amount of XP to add (e.g. 10000):")
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_xp', silver_val=state['silver_val'], gold_val=gold, **state)
 
