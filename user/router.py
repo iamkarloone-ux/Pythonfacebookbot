@@ -6,7 +6,7 @@ import payment_verifier
 import language_manager as lang
 from config import ADMIN_ID
 
-from user import menu, purchase, account, support, custom, manual, car_injector
+from user import menu, purchase, account, support, custom, manual, car_injector, reseller_tool
 
 async def handle_user_message(sender_psid: str, event: dict, lower_text: str, received_text: str):
     # 1. Check Paused Status & Maintenance
@@ -50,19 +50,16 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
             await messenger_api.send_text(sender_psid, lang.get_text('receipt_analyzing', user_lang))
             
             if state == 'awaiting_receipt_for_custom_mod':
-                # Custom Mod -> Forward to admin, don't use AI
                 user_name = await messenger_api.get_user_profile(sender_psid)
                 await messenger_api.send_text(ADMIN_ID, f"🧾 Custom Order Receipt from {user_name}\nOrder: {state_obj['orderAmount']} {state_obj['orderType']}")
                 await messenger_api.send_text(sender_psid, lang.get_text('custom_mod_success', user_lang))
                 state_manager.clear_user_state(sender_psid)
             elif state == 'awaiting_receipt_for_car_injector':
-                # Car Injector -> AI Scanner (Bypasses manual fallback if failed)
                 analysis = await payment_verifier.analyze_receipt_with_external_api(image_url)
                 if not analysis:
                     analysis = {"extracted_info": {"amount": "0", "reference_number": "Failed"}}
                 await car_injector.handle_car_receipt_analysis(sender_psid, analysis, user_lang, image_url)
             else:
-                # Normal Mod -> AI Scanner
                 analysis = await payment_verifier.analyze_receipt_with_external_api(image_url)
                 if not analysis:
                     analysis = {"extracted_info": {"amount": "0", "reference_number": "Failed"}}
@@ -87,7 +84,14 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
         elif state == 'awaiting_car_inject_password': return await car_injector.handle_car_injector_password(sender_psid, received_text, user_lang)
         elif state == 'awaiting_car_inject_choice': return await car_injector.handle_car_selection(sender_psid, received_text, user_lang)
         
-        # If user sends text instead of a receipt image
+        # Reseller Panel States
+        elif state == 'awaiting_reseller_key': return await reseller_tool.handle_reseller_key(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_reseller_target_email': return await reseller_tool.handle_reseller_email(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_reseller_target_pass': return await reseller_tool.handle_reseller_password(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_reseller_target_devid': return await reseller_tool.handle_reseller_devid(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_reseller_patch_choice': return await reseller_tool.handle_reseller_patch_choice(sender_psid, lower_text, user_lang)
+        
+        # Text instead of image fallback
         if state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod', 'awaiting_receipt_for_car_injector']:
             if received_text:
                 await messenger_api.send_text(sender_psid, lang.get_text('receipt_cancelled_text_instead', user_lang))
@@ -104,6 +108,7 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
         '6': lambda: support.handle_view_proofs(sender_psid, user_lang),
         '7': lambda: support.prompt_report_ref(sender_psid, user_lang),
         '8': lambda: car_injector.prompt_car_injector(sender_psid, user_lang),
+        '9': lambda: reseller_tool.prompt_reseller_tool(sender_psid, user_lang),
     }
 
     action = commands.get(lower_text)
