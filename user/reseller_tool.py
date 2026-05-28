@@ -129,7 +129,6 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
         await messenger_api.send_text(sender_psid, "💰 Enter the exact amount of Silver to add (e.g. 5000000):")
         state_manager.set_user_state(sender_psid, 'awaiting_reseller_custom_silver', **state)
     elif action == 'inject_car':
-        # Load and display the catalog first
         await messenger_api.send_text(sender_psid, "⏳ Downloading available vehicle inventory details...")
         car_db, car_maps = await load_db_data_async()
         
@@ -250,11 +249,13 @@ async def execute_reseller_patch_task(
             # 1. Fetch target account profile
             cont, h = await get_profile_injector(client, email, password, dev_id, carx="", is_target=False)
             profile = decrypt_payload(cont["compressed_data"])
-            garage = profile.get("cars", {}).get("items", profile)
+            
+            # 2. Locate Garage (Matched exactly to the working car_injector.py inline check)
+            garage = profile["cars"]["items"] if ("cars" in profile and "items" in profile["cars"]) else profile
             
             summary_actions = []
 
-            # 2. Process Mod Requests
+            # 3. Process Mod Requests
             
             # --- Modification: Ban Safe Pack 1 (10M Silver + 6k Gold) ---
             if action == 'safe_1':
@@ -323,7 +324,7 @@ async def execute_reseller_patch_task(
                 car_name = car_db[target_car_id].get("__desc_id", f"Car {target_car_id}")
                 summary_actions.append(f"🚗 Injected untouched {car_name} (ID: {target_car_id}) into garage slot {last_id}")
 
-            # 3. Securely Encrypt and Upload back to CarX Server
+            # 4. Securely Encrypt and Upload back to CarX Server
             cont["compressed_data"] = encrypt_payload_strict(profile)
             cont["lastSyncTime"] = int(time.time())
             
@@ -331,7 +332,7 @@ async def execute_reseller_patch_task(
             if r_up.status_code != 200:
                 raise Exception(f"Upload rejected by CarX sync server: {r_up.text}")
                 
-            # 4. Success delivery notification
+            # 5. Success delivery notification
             success_msg = (
                 "🎉 *PATCHING COMPLETED SUCCESSFULLY!* 🎉\n\n"
                 f"📧 Account: `{email}`\n"
