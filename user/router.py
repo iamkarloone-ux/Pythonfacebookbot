@@ -88,15 +88,34 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
         elif state == 'awaiting_reseller_key': return await reseller_tool.handle_reseller_key(sender_psid, received_text, user_lang)
         elif state == 'awaiting_reseller_target_email': return await reseller_tool.handle_reseller_email(sender_psid, received_text, user_lang)
         elif state == 'awaiting_reseller_target_pass': return await reseller_tool.handle_reseller_password(sender_psid, received_text, user_lang)
-        elif state == 'awaiting_reseller_patch_choice': return await reseller_tool.handle_reseller_patch_choice(sender_psid, lower_text, user_lang)
+        elif state == 'awaiting_reseller_patch_choice': return await reseller_tool.handle_reseller_patch_choice(sender_psid, received_text, user_lang)
+        
+        # Reseller Loopback State
+        elif state == 'awaiting_reseller_post_patch_choice':
+            choice = lower_text.strip()
+            if choice in ['patch_again', '1', 'apply another patch']:
+                return await reseller_tool.show_reseller_patch_menu(sender_psid, user_lang, state_obj)
+            elif choice in ['reseller_switch_account', '2', 'switch account']:
+                return await reseller_tool.handle_reseller_key(sender_psid, state_obj['license_key'], user_lang)
+            else:
+                state_manager.clear_user_state(sender_psid)
+                return await menu.show_user_menu(sender_psid, user_lang)
         
         # Reseller Custom Resource Inputs
         elif state == 'awaiting_reseller_custom_silver': return await reseller_tool.handle_reseller_custom_silver(sender_psid, received_text, user_lang)
         elif state == 'awaiting_reseller_custom_gold': return await reseller_tool.handle_reseller_custom_gold(sender_psid, received_text, user_lang)
         elif state == 'awaiting_reseller_custom_xp': return await reseller_tool.handle_reseller_custom_xp(sender_psid, received_text, user_lang)
         
+        # Reseller Nitro Sub-flows
+        elif state == 'awaiting_reseller_nitro_choice': return await reseller_tool.handle_reseller_nitro_choice(sender_psid, lower_text, user_lang)
+        elif state == 'awaiting_reseller_single_nitro_id': return await reseller_tool.handle_reseller_single_nitro_id(sender_psid, received_text, user_lang)
+        
         # Reseller Car ID Input
-        elif state == 'awaiting_reseller_car_id': return await reseller_tool.handle_reseller_car_id(sender_psid, received_text, user_lang)
+        elif state == 'awaiting_reseller_car_id': 
+            choice = lower_text.strip()
+            if choice == 'patch_again':
+                return await reseller_tool.show_reseller_patch_menu(sender_psid, user_lang, state_obj)
+            return await reseller_tool.handle_reseller_car_id(sender_psid, received_text, user_lang)
         
         # Text instead of image fallback
         if state in ['awaiting_receipt_for_purchase', 'awaiting_receipt_for_custom_mod', 'awaiting_receipt_for_car_injector']:
@@ -122,4 +141,4 @@ async def handle_user_message(sender_psid: str, event: dict, lower_text: str, re
     if action:
         await action()
     elif received_text and not message.get("sticker_id"):
-        await menu.show_user_menu(sender_psid, user_lang)
+        await menu.show_user_menu(sender_psid, user_lang) 
