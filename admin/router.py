@@ -13,7 +13,7 @@ async def handle_admin_message(sender_psid: str, lower_text: str, received_text:
     if lower_text == 'my id':
         return await messenger_api.send_text(sender_psid, f"Your Facebook Page-Scoped ID is: {sender_psid}")
 
-    # 2. State-Based Routing (If Admin is in the middle of a process)
+    # 2. State-Based Routing
     if state:
         # -- Operations / General --
         if state == 'awaiting_reply_psid': return await operations.prompt_reply_username(sender_psid, received_text)
@@ -48,9 +48,13 @@ async def handle_admin_message(sender_psid: str, lower_text: str, received_text:
         elif state == 'awaiting_edit_claims_values': return await ref_manager.process_edit_claims_update(sender_psid, received_text)
         elif state == 'awaiting_edit_admin': return await operations.process_edit_admin(sender_psid, received_text)
         
-        return # Do nothing if state doesn't match
+        # -- Reseller License Manager --
+        elif state == 'awaiting_create_license_details': return await operations.process_create_license(sender_psid, received_text)
+        elif state == 'awaiting_delete_license_key': return await operations.process_delete_license(sender_psid, received_text)
+        
+        return
 
-    # 3. Menu Command Routing (If Admin is NOT in a state)
+    # 3. Menu Command Routing
     commands = {
         '1': lambda: ref_manager.handle_view_references(sender_psid, 1),
         '3': lambda: mod_manager.prompt_edit_mod(sender_psid),
@@ -69,6 +73,10 @@ async def handle_admin_message(sender_psid: str, lower_text: str, received_text:
         '17': lambda: operations.prompt_broadcast(sender_psid),
         '18': lambda: ref_manager.prompt_edit_claims_ref(sender_psid),
         '19': lambda: operations.prompt_sales_stats(sender_psid),
+        '20': lambda: operations.show_license_submenu(sender_psid),
+        '20a': lambda: operations.prompt_create_license(sender_psid),
+        '20b': lambda: operations.handle_view_licenses(sender_psid),
+        '20c': lambda: operations.prompt_delete_license(sender_psid),
     }
 
     action = commands.get(lower_text)
