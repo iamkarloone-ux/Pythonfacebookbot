@@ -5,13 +5,13 @@ import messenger_api
 import carx_cloner
 import uuid
 import secrets
+import math
 
 async def show_admin_menu(sender_psid: str):
     admin_info = await db.get_admin_info()
     online = '✅ Online' if admin_info and admin_info['is_online'] else '❌ Offline'
     maintenance = '🔴 ON' if await db.get_maintenance_status() else '🟢 OFF'
     
-    # Note: Removed outdated "Bulk Account" and "Delete Account" types
     menu = f"""Admin Menu:
 1: 👁️ View references
 3: 🖱️ Edit mod details (Set Cloner Source here)
@@ -29,6 +29,7 @@ async def show_admin_menu(sender_psid: str):
 17: 📢 Broadcast message
 18: ✍️ Edit ref claims
 19: 📊 View Sales Stats
+20: 🔑 Manage Reseller Licenses
 """
     await messenger_api.send_text(sender_psid, menu)
 
@@ -69,11 +70,10 @@ async def process_admin_create(sender_psid: str, text: str):
             return
 
         target_email = state['email']
-        target_pass = secrets.token_hex(5) # 10 char random pass
+        target_pass = secrets.token_hex(5)
         
         await messenger_api.send_text(sender_psid, "⏳ Launching Cloner... Please wait up to 30 seconds.")
         
-        # We run the cloner synchronously in this async function to ensure we catch errors immediately
         await carx_cloner.execute_clone(
             src_email=mod['src_email'],
             src_pass=mod['src_pass'],
@@ -88,8 +88,6 @@ async def process_admin_create(sender_psid: str, text: str):
         
     except Exception as e:
         await messenger_api.send_text(sender_psid, f"❌ Cloner Failed: {e}")
-        # (Append this to admin/operations.py below the admin_create functions)
-import asyncio
 
 # --- VIEW JOBS ---
 async def handle_view_jobs(sender_psid: str):
@@ -185,7 +183,7 @@ async def process_broadcast_execute(sender_psid: str, text: str):
             success += 1
         except Exception:
             error += 1
-        await asyncio.sleep(0.1) # Avoid rate limits
+        await asyncio.sleep(0.1)
         
     await messenger_api.send_text(sender_psid, f"✅ Broadcast complete!\nSuccess: {success}\nFailed: {error}")
 
@@ -217,7 +215,8 @@ async def process_sales_stats(sender_psid: str, text: str):
         await messenger_api.send_text(sender_psid, f"❌ Error: {e}")
     finally:
         state_manager.clear_user_state(sender_psid)
-        # --- EDIT ADMIN INFO (GCASH/ID) ---
+
+# --- EDIT ADMIN INFO ---
 async def prompt_edit_admin(sender_psid: str):
     msg = "Provide new admin info.\nFormat: Facebook ID: [New ID], GCash Number: [New Number]"
     await messenger_api.send_text(sender_psid, msg)
@@ -245,5 +244,77 @@ async def process_edit_admin(sender_psid: str, text: str):
     finally:
         state_manager.clear_user_state(sender_psid)
 
-# (The rest of the standard utility functions like Broadcast, Reply to User, View Jobs, etc. go here)
-# ... I will provide `ref_manager.py` and the remaining operations next if you confirm this structure works!
+# --- RESELLER LICENSE PANEL OPERATIONS ---
+
+async def show_license_submenu(sender_psid: str):
+    msg = (
+        "🔑 *Reseller License Panel* 🔑\n\n"
+        "Reply with:\n"
+        "👉 *20a* : ➕ Create License Key\n"
+        "👉 *20b* : 👁️ View Licenses & Time Left\n"
+        "👉 *20c* : 🗑️ Delete License Key\n\n"
+        "Type 'Menu' to exit."
+    )
+    await messenger_api.send_text(sender_psid, msg)
+
+async def prompt_create_license(sender_psid: str):
+    msg = (
+        "Provide license details in this exact format:\n"
+        "🔑 *[Key], [Days], [User Name]*\n\n"
+        "Example: `KEY-VIP-99, 30, John Doe`"
+    )
+    await messenger_api.send_text(sender_psid, msg)
+    state_manager.set_user_state(sender_psid, 'awaiting_create_license_details')
+
+async def process_create_license(sender_psid: str, text: str):
+    try:
+        parts = [p.strip() for p in text.split(',')]
+        if len(parts) < 3:
+            raise ValueError("Input format is incomplete.")
+        
+        key_input = parts[0]
+        days_input = int(parts[1])
+        name_input = parts[2]
+        
+        await db.add_license_key(key_input, days_input, name_input)
+        await messenger_api.send_text(sender_psid, f"✅ License Key `{key_input}` generated successfully for {name_input} ({days_input} Days).")
+    except Exception as e:
+        await messenger_api.send_text(sender_psid, f"❌ Format error. Use: Key, Days, Name. Details: {e}")
+    finally:
+        state_manager.clear_user_state(sender_psid)
+
+async def handle_view_licenses(sender_psid: str):
+    licenses = await db.get_all_licenses()
+    if not licenses:
+        return await messenger_api.send_text(sender_psid, "ℹ️ No license keys found in the database.")
+        
+    response = "🔑 --- Reseller Licenses List ---\n\n"
+    for lic in licenses:
+        days_left = math.ceil(lic['days_remaining']) if lic['days_remaining'] > 0 else 0
+        status_emoji = "🟢 Active" if (lic['is_active'] and days_left > 0) else "🔴 Expired"
+        
+        response += (
+            f"👤 *Reseller:* {lic['assigned_to'] or 'Unknown'}\n"
+            f"🔑 *Key:* `{lic['key']}`\n"
+            f"⏱️ *Remaining:* {days_left} Days ({status_emoji})\n"
+            f"📅 *Expires:* {lic['expires_at'].strftime('%Y-%m-%d %H:%M')}\n\n"
+        )
+        
+    await messenger_api.send_text(sender_psid, response)
+
+async def prompt_delete_license(sender_psid: str):
+    await messenger_api.send_text(sender_psid, "Enter the exact License Key you want to permanently delete:")
+    state_manager.set_user_state(sender_psid, 'awaiting_delete_license_key')
+
+async def process_delete_license(sender_psid: str, text: str):
+    key_input = text.strip()
+    try:
+        deleted = await db.deactivate_license_key(key_input)
+        if deleted > 0:
+            await messenger_api.send_text(sender_psid, f"✅ License `{key_input}` deleted successfully.")
+        else:
+            await messenger_api.send_text(sender_psid, f"❌ License `{key_input}` was not found.")
+    except Exception as e:
+        await messenger_api.send_text(sender_psid, f"❌ Database deletion failed: {e}")
+    finally:
+        state_manager.clear_user_state(sender_psid)
