@@ -84,7 +84,7 @@ async def process_admin_create(sender_psid: str, text: str):
         )
         
         await db.create_account_creation_job(sender_psid, target_email, target_pass, mod_id)
-        await messenger_api.send_text(sender_psid, f"✅ Account Cloned Successfully!\n\n📧: `{target_email}`\n🔐: `{target_pass}`")
+        await messenger_api.send_text(sender_psid, f"✅ Account Done Successfully!\n\n📧: `{target_email}`\n🔐: `{target_pass}`")
         
     except Exception as e:
         await messenger_api.send_text(sender_psid, f"❌ Cloner Failed: {e}")
