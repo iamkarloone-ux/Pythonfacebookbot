@@ -1,0 +1,5 @@
+.env
+.license_key
+.client_id
+__pycache__/
+*.pyc 
