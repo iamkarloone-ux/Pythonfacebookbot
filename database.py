@@ -78,12 +78,13 @@ async def init_db():
                 )
             """)
             
-            # Reseller License Table
+            # Reseller License Table with device lock/binding
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS licenses (
                     key TEXT PRIMARY KEY, 
                     expires_at TIMESTAMPTZ NOT NULL, 
                     assigned_to TEXT,
+                    bound_user_id TEXT, -- Facebook PSID, Telegram ID, or PC Client ID
                     is_active BOOLEAN DEFAULT TRUE
                 )
             """)
@@ -401,14 +402,34 @@ async def deactivate_license_key(key: str) -> int:
         res = await conn.execute("DELETE FROM licenses WHERE key = $1", key)
         return int(res.split(' ')[1])
 
-async def verify_license_key(key: str) -> dict:
+async def verify_license_key(key: str, user_id: str) -> dict:
+    """Checks key validity and handles automatic one-device/one-user binding."""
     if not pool:
         return None
     async with pool.acquire() as conn:
-        query = """
-            SELECT expires_at 
+        row = await conn.fetchrow("""
+            SELECT expires_at, bound_user_id, is_active 
             FROM licenses 
             WHERE key = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
-        """
-        row = await conn.fetchrow(query, key)
-        return dict(row) if row else None
+        """, key)
+        
+        if not row:
+            return None # Invalid or expired
+            
+        bound_id = row["bound_user_id"]
+        
+        # 1. If key is unbound, lock it to this user/device ID
+        if not bound_id:
+            await conn.execute("""
+                UPDATE licenses 
+                SET bound_user_id = $1 
+                WHERE key = $2
+            """, user_id, key)
+            return {"expires_at": row["expires_at"], "bound": True}
+            
+        # 2. If already bound, verify it matches
+        if bound_id == user_id:
+            return {"expires_at": row["expires_at"], "bound": True}
+            
+        # Already bound to another user/device
+        return {"expires_at": row["expires_at"], "bound": False}
