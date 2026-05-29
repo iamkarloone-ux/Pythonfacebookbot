@@ -78,13 +78,12 @@ async def init_db():
                 )
             """)
             
-            # Reseller License Table with device lock/binding
+            # Reseller License Table
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS licenses (
                     key TEXT PRIMARY KEY, 
                     expires_at TIMESTAMPTZ NOT NULL, 
                     assigned_to TEXT,
-                    bound_user_id TEXT, -- Facebook PSID, Telegram ID, or PC Client ID
                     is_active BOOLEAN DEFAULT TRUE
                 )
             """)
@@ -98,7 +97,7 @@ async def init_db():
             """)
             await conn.execute("""CREATE TABLE IF NOT EXISTS users (psid TEXT PRIMARY KEY, lang TEXT DEFAULT 'en')""")
 
-        # 3. Graceful Alterations
+        # 3. Graceful Alterations (Database Migrations)
         try:
             await conn.execute('ALTER TABLE mods DROP COLUMN x_coordinate')
             await conn.execute('ALTER TABLE mods DROP COLUMN y_coordinate')
@@ -110,6 +109,13 @@ async def init_db():
             await conn.execute('ALTER TABLE mods ADD COLUMN src_pass TEXT')
             await conn.execute('ALTER TABLE mods ADD COLUMN src_dev_id TEXT')
             await conn.execute('ALTER TABLE mods ADD COLUMN src_carx_id TEXT')
+        except asyncpg.exceptions.DuplicateColumnError:
+            pass
+
+        # Automatically alter table to add missing "bound_user_id" column if it doesn't exist
+        try:
+            await conn.execute('ALTER TABLE licenses ADD COLUMN bound_user_id TEXT')
+            print("📡 Added 'bound_user_id' column to existing licenses table.")
         except asyncpg.exceptions.DuplicateColumnError:
             pass
 
