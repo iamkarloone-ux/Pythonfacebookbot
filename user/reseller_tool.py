@@ -40,11 +40,22 @@ async def handle_reseller_key(sender_psid: str, text: str, user_lang: str):
     key = text.strip()
     replies = [{"title": "⬅️ Back to Menu", "payload": "menu"}]
     
-    license_info = await db.verify_license_key(key)
+    # Verify key and enforce binding to the Facebook sender_psid
+    license_info = await db.verify_license_key(key, sender_psid)
     if not license_info:
         msg = (
             "❌ Invalid or Expired License Key.\n\n"
             "Please make sure your key is typed correctly. To buy a subscription (600 PHP/Month), contact:\n"
+            "💬 m.me/lark.abalunan.1\n\n"
+            "👉 Type 'Menu' to cancel."
+        )
+        await messenger_api.send_quick_replies(sender_psid, msg, replies)
+        return
+        
+    if license_info.get("bound") is False:
+        msg = (
+            "❌ This License Key is already bound to another user's device/account.\n\n"
+            "Keys are locked to 1 account/user only. To resolve this, contact the developer:\n"
             "💬 m.me/lark.abalunan.1\n\n"
             "👉 Type 'Menu' to cancel."
         )
@@ -85,15 +96,15 @@ async def show_reseller_patch_menu(sender_psid: str, user_lang: str, state: dict
     msg = (
         "⚙️ *Reseller Patcher Action Menu* ⚙️\n"
         f"📧 Target: `{state['target_email']}`\n\n"
-        "Choose an action to apply:\n"
-        "👉 Type *1* : Ban-Safe Pack 1 (10M Silver + 6k Gold)\n"
-        "👉 Type *2* : Ban-Safe Pack 2 (6M Silver + 1k Gold)\n"
-        "👉 Type *3* : Custom Resources (Silver, Gold, XP)\n"
-        "👉 Type *4* : Max Nitro (All or Single Vehicle)\n"
-        "👉 Type *5* : Map Region Unlocker (All Areas)\n"
-        "👉 Type *6* : Inject Custom Car\n"
-        "👉 Type *7* : 👥 Use Different Account\n"
-        "👉 Type *8* : 🚪 Exit to Main Menu"
+        "Choose an action to apply:\n\n"
+        "1️⃣ : Ban-Safe Pack 1 (10M Silver + 6k Gold)\n"
+        "2️⃣ : Ban-Safe Pack 2 (6M Silver + 1k Gold)\n"
+        "3️⃣ : Custom Resources (Silver, Gold, XP - with Skips)\n"
+        "4️⃣ : Max Nitro (All or Single Vehicle)\n"
+        "5️⃣ : Map Region Unlocker (All Areas)\n"
+        "6️⃣ : Inject Custom Car\n"
+        "7️⃣ : 👥 Use Different Account\n"
+        "8️⃣ : 🚪 Exit to Main Menu"
     )
     
     replies = [
