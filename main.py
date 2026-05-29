@@ -35,13 +35,16 @@ async def root():
     return Response(content="Bot is online and healthy.", status_code=200)
 
 @app.get("/api/verify-license")
-async def api_verify_license(key: str):
-    """API endpoint called by resourcestool4.py to check reseller license validity."""
+async def api_verify_license(key: str, client_id: str = "unknown"):
+    """API endpoint called by resourcestool.py to check reseller license validity with device lock."""
     try:
-        license_info = await database.verify_license_key(key.strip())
+        license_info = await database.verify_license_key(key.strip(), client_id.strip())
         if license_info:
-            expiry_str = license_info["expires_at"].strftime("%Y-%m-%d %H:%M:%S UTC")
-            return {"valid": True, "expiry": expiry_str}
+            if license_info.get("bound") is True:
+                expiry_str = license_info["expires_at"].strftime("%Y-%m-%d %H:%M:%S UTC")
+                return {"valid": True, "expiry": expiry_str}
+            else:
+                return {"valid": False, "error": "This license key is already bound to another device or user account."}
         return {"valid": False, "expiry": None}
     except Exception as e:
         print(f"Error checking license key {key}: {e}")
@@ -70,7 +73,10 @@ async def handle_webhook(request: Request):
             for event in entry.get("messaging", []):
                 sender_id = event.get("sender", {}).get("id")
                 
+                # Check if it's a message or a quick reply postback
                 if sender_id and ("message" in event or "postback" in event):
+                    # Process the message in the background. 
+                    # This is CRITICAL so we reply to Facebook with 200 OK immediately.
                     asyncio.create_task(process_message(sender_id, event))
                     
         return Response(content="EVENT_RECEIVED", status_code=200)
@@ -92,7 +98,7 @@ async def process_message(sender_psid: str, event: dict):
         # Convert to lowercase for easier command matching
         lower_text = received_text.lower().strip() if received_text else ""
         
-        # Log incoming messages
+        # Log incoming messages (Useful for debugging on Render)
         if received_text:
             print(f"[INCOMING] {sender_psid}: {received_text}")
 
@@ -109,6 +115,7 @@ async def process_message(sender_psid: str, event: dict):
         print(f"❌ CRITICAL ERROR handling message from {sender_psid}: {e}")
         traceback.print_exc()
         
+        # Optional Failsafe: Let the user know something broke
         try:
             await messenger_api.send_text(sender_psid, "🔧 Oops! Something went wrong on our end. Please type 'Menu' to try again.")
             state_manager.clear_user_state(sender_psid)
