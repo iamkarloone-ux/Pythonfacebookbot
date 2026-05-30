@@ -1,3 +1,4 @@
+# database.py
 import asyncpg
 from config import DATABASE_URL
 import sys
@@ -116,6 +117,13 @@ async def init_db():
         try:
             await conn.execute('ALTER TABLE licenses ADD COLUMN bound_user_id TEXT')
             print("📡 Added 'bound_user_id' column to existing licenses table.")
+        except asyncpg.exceptions.DuplicateColumnError:
+            pass
+
+        # Automatically alter table to add missing "tier" column if it doesn't exist
+        try:
+            await conn.execute("ALTER TABLE licenses ADD COLUMN tier TEXT DEFAULT 'premium'")
+            print("📡 Added 'tier' column to existing licenses table.")
         except asyncpg.exceptions.DuplicateColumnError:
             pass
 
@@ -382,21 +390,23 @@ async def get_sales_statistics(period: str):
 
 # --- LICENSE SYSTEM Helper Query Functions ---
 
-async def add_license_key(key: str, days: int, assigned_to: str):
+async def add_license_key(key: str, days: int, assigned_to: str, tier: str = 'premium'):
+    """Adds a reseller license key with a specified tier ('free' or 'premium')."""
     async with pool.acquire() as conn:
         await conn.execute("""
-            INSERT INTO licenses (key, expires_at, assigned_to) 
-            VALUES ($1, CURRENT_TIMESTAMP + ($2 * INTERVAL '1 day'), $3)
+            INSERT INTO licenses (key, expires_at, assigned_to, tier) 
+            VALUES ($1, CURRENT_TIMESTAMP + ($2 * INTERVAL '1 day'), $3, $4)
             ON CONFLICT (key) DO UPDATE SET 
                 expires_at = CURRENT_TIMESTAMP + ($2 * INTERVAL '1 day'), 
                 assigned_to = EXCLUDED.assigned_to, 
+                tier = EXCLUDED.tier,
                 is_active = TRUE
-        """, key, days, assigned_to)
+        """, key, days, assigned_to, tier)
 
 async def get_all_licenses():
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT key, expires_at, assigned_to, is_active,
+            SELECT key, expires_at, assigned_to, is_active, tier,
                    EXTRACT(epoch FROM (expires_at - NOW())) / 86400 AS days_remaining
             FROM licenses
             ORDER BY expires_at DESC
@@ -414,7 +424,7 @@ async def verify_license_key(key: str, user_id: str) -> dict:
         return None
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
-            SELECT expires_at, bound_user_id, is_active 
+            SELECT expires_at, bound_user_id, is_active, tier 
             FROM licenses 
             WHERE key = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
         """, key)
@@ -423,6 +433,7 @@ async def verify_license_key(key: str, user_id: str) -> dict:
             return None # Invalid or expired
             
         bound_id = row["bound_user_id"]
+        tier = row["tier"] or "premium"
         
         # 1. If key is unbound, lock it to this user/device ID
         if not bound_id:
@@ -431,11 +442,11 @@ async def verify_license_key(key: str, user_id: str) -> dict:
                 SET bound_user_id = $1 
                 WHERE key = $2
             """, user_id, key)
-            return {"expires_at": row["expires_at"], "bound": True}
+            return {"expires_at": row["expires_at"], "bound": True, "tier": tier}
             
         # 2. If already bound, verify it matches
         if bound_id == user_id:
-            return {"expires_at": row["expires_at"], "bound": True}
+            return {"expires_at": row["expires_at"], "bound": True, "tier": tier}
             
         # Already bound to another user/device
-        return {"expires_at": row["expires_at"], "bound": False}
+        return {"expires_at": row["expires_at"], "bound": False, "tier": tier}
