@@ -13,6 +13,7 @@ import messenger_api
 import language_manager as lang
 from config import ADMIN_ID
 from user.car_injector import get_profile_injector, decrypt_payload, BASE_SYNC, load_db_data_async
+from user import menu
 
 # --- LOCAL ENCRYPTION UTILITIES ---
 
@@ -23,7 +24,6 @@ def encrypt_payload_strict_local(profile_dict):
 # --- USER FLOWS ---
 
 async def prompt_reseller_tool(sender_psid: str, user_lang: str):
-    """Entry point: Asks the user for their reseller license key."""
     replies = [{"title": "⬅️ Back to Menu", "payload": "menu"}]
     
     msg = (
@@ -40,7 +40,6 @@ async def handle_reseller_key(sender_psid: str, text: str, user_lang: str):
     key = text.strip()
     replies = [{"title": "⬅️ Back to Menu", "payload": "menu"}]
     
-    # Verify key and enforce binding to the Facebook sender_psid
     license_info = await db.verify_license_key(key, sender_psid)
     if not license_info:
         msg = (
@@ -62,9 +61,12 @@ async def handle_reseller_key(sender_psid: str, text: str, user_lang: str):
         await messenger_api.send_quick_replies(sender_psid, msg, replies)
         return
 
-    await messenger_api.send_text(sender_psid, "✅ License verified successfully!")
+    tier_level = license_info.get("tier", "premium")
+    tier_display = "⭐ PREMIUM" if tier_level == "premium" else "🆕 FREE"
+    
+    await messenger_api.send_text(sender_psid, f"✅ License verified successfully! ({tier_display})")
     await messenger_api.send_quick_replies(sender_psid, "📧 Enter the target CarX Street account Email:\n\n👉 Type 'Menu' to cancel.", replies)
-    state_manager.set_user_state(sender_psid, 'awaiting_reseller_target_email', license_key=key, lang=user_lang)
+    state_manager.set_user_state(sender_psid, 'awaiting_reseller_target_email', license_key=key, license_tier=tier_level, lang=user_lang)
 
 async def handle_reseller_email(sender_psid: str, text: str, user_lang: str):
     state = state_manager.get_user_state(sender_psid)
@@ -79,6 +81,7 @@ async def handle_reseller_email(sender_psid: str, text: str, user_lang: str):
         sender_psid, 
         'awaiting_reseller_target_pass', 
         license_key=state['license_key'], 
+        license_tier=state.get('license_tier', 'premium'),
         target_email=email, 
         lang=user_lang
     )
@@ -87,39 +90,63 @@ async def handle_reseller_password(sender_psid: str, text: str, user_lang: str):
     state = state_manager.get_user_state(sender_psid)
     password = text.strip()
     
-    # Store complete credentials in state
     state['target_pass'] = password
     await show_reseller_patch_menu(sender_psid, user_lang, state)
 
 async def show_reseller_patch_menu(sender_psid: str, user_lang: str, state: dict):
-    """The central hub menu for performing actions on the active customer account."""
-    msg = (
-        "⚙️ *Reseller Patcher Action Menu* ⚙️\n"
-        f"📧 Target: `{state['target_email']}`\n\n"
-        "Choose an action to apply:\n\n"
-        "1️⃣ : Ban-Safe Pack 1 (10M Silver + 6k Gold)\n"
-        "2️⃣ : Ban-Safe Pack 2 (6M Silver + 1k Gold)\n"
-        "3️⃣ : Custom Resources (Silver, Gold, XP - with Skips)\n"
-        "4️⃣ : Max Nitro (All or Single Vehicle)\n"
-        "5️⃣ : Map Region Unlocker (All Areas)\n"
-        "6️⃣ : Inject Custom Car\n"
-        "7️⃣ : 👥 Use Different Account\n"
-        "8️⃣ : 🚪 Exit to Main Menu"
-    )
+    tier = state.get('license_tier', 'premium')
     
-    replies = [
-        {"title": "1️⃣ Safe Pack 1", "payload": "patch_safe_1"},
-        {"title": "2️⃣ Safe Pack 2", "payload": "patch_safe_2"},
-        {"title": "3️⃣ Custom", "payload": "patch_custom"},
-        {"title": "4️⃣ Max Nitro", "payload": "patch_nitro_menu"},
-        {"title": "5️⃣ Map Unlock Only", "payload": "patch_maps"},
-        {"title": "6️⃣ Inject Custom Car", "payload": "patch_inject_car"},
-        {"title": "7️⃣ Switch Account", "payload": "reseller_switch_account"},
-        {"title": "8️⃣ Exit Menu", "payload": "menu"}
-    ]
+    if tier == "free":
+        msg = (
+            "⚙️ *Reseller Patcher Action Menu* ⚙️ (🆕 FREE TIER)\n"
+            f"📧 Target: `{state['target_email']}`\n\n"
+            "Choose an action to apply:\n\n"
+            "1️⃣ : Ban-Safe Pack 1 (10M/6k) 🔒\n"
+            "2️⃣ : Ban-Safe Pack 2 (6M/1k) ✅\n"
+            "3️⃣ : Custom Resources 🔒\n"
+            "4️⃣ : Max Nitro 🔒\n"
+            "5️⃣ : Map Region Unlocker 🔒\n"
+            "6️⃣ : Inject Custom Car 🔒\n"
+            "7️⃣ : 👥 Use Different Account\n"
+            "8️⃣ : 🚪 Exit to Main Menu"
+        )
+        replies = [
+            {"title": "1️⃣ Safe Pack 1 🔒", "payload": "premium_locked"},
+            {"title": "2️⃣ Safe Pack 2 ✅", "payload": "patch_safe_2"},
+            {"title": "3️⃣ Custom 🔒", "payload": "premium_locked"},
+            {"title": "4️⃣ Max Nitro 🔒", "payload": "premium_locked"},
+            {"title": "5️⃣ Map Unlock 🔒", "payload": "premium_locked"},
+            {"title": "6️⃣ Inject Car 🔒", "payload": "premium_locked"},
+            {"title": "7️⃣ Switch Account", "payload": "reseller_switch_account"},
+            {"title": "8️⃣ Exit Menu", "payload": "menu"}
+        ]
+    else:
+        msg = (
+            "⚙️ *Reseller Patcher Action Menu* ⚙️ (⭐ PREMIUM)\n"
+            f"📧 Target: `{state['target_email']}`\n\n"
+            "Choose an action to apply:\n\n"
+            "1️⃣ : Ban-Safe Pack 1 (10M Silver + 6k Gold)\n"
+            "2️⃣ : Ban-Safe Pack 2 (6M Silver + 1k Gold)\n"
+            "3️⃣ : Custom Resources (Silver, Gold, XP - with Skips)\n"
+            "4️⃣ : Max Nitro (All or Single Vehicle)\n"
+            "5️⃣ : Map Region Unlocker (All Areas)\n"
+            "6️⃣ : Inject Custom Car\n"
+            "7️⃣ : 👥 Use Different Account\n"
+            "8️⃣ : 🚪 Exit to Main Menu"
+        )
+        replies = [
+            {"title": "1️⃣ Safe Pack 1", "payload": "patch_safe_1"},
+            {"title": "2️⃣ Safe Pack 2", "payload": "patch_safe_2"},
+            {"title": "3️⃣ Custom", "payload": "patch_custom"},
+            {"title": "4️⃣ Max Nitro", "payload": "patch_nitro_menu"},
+            {"title": "5️⃣ Map Unlock Only", "payload": "patch_maps"},
+            {"title": "6️⃣ Inject Custom Car", "payload": "patch_inject_car"},
+            {"title": "7️⃣ Switch Account", "payload": "reseller_switch_account"},
+            {"title": "8️⃣ Exit Menu", "payload": "menu"}
+        ]
+        
     await messenger_api.send_quick_replies(sender_psid, msg, replies)
     
-    # Clean state before saving to prevent duplicate parameter mapping (avoiding TypeError)
     state.pop("state", None)
     state.pop("timestamp", None)
     state_manager.set_user_state(sender_psid, 'awaiting_reseller_patch_choice', **state)
@@ -128,6 +155,17 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
     state = state_manager.get_user_state(sender_psid)
     choice = text.strip().lower()
     
+    if choice == 'premium_locked':
+        await messenger_api.send_text(
+            sender_psid, 
+            "🔒 *Premium Feature Locked.*\n\n"
+            "This feature requires a Premium License Key. "
+            "Your current key is registered on the Free tier.\n\n"
+            "To buy a Premium subscription (600 PHP/Month), contact:\n"
+            "💬 m.me/lark.abalunan.1"
+        )
+        return await show_reseller_patch_menu(sender_psid, user_lang, state)
+
     choice_map = {
         'patch_safe_1': 'safe_1', '1': 'safe_1',
         'patch_safe_2': 'safe_2', '2': 'safe_2',
@@ -146,6 +184,20 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
     state.pop("state", None)
     state.pop("timestamp", None)
 
+    # Restriction Guard: Deny premium actions for Free Tier users
+    premium_actions = ['safe_1', 'custom', 'nitro_menu', 'maps', 'inject_car']
+    tier = state.get("license_tier", "premium")
+    if action in premium_actions and tier == "free":
+        await messenger_api.send_text(
+            sender_psid, 
+            "🔒 *Premium Feature Locked.*\n\n"
+            "This feature is not available with your current license tier. "
+            "Please upgrade to Premium to proceed.\n\n"
+            "Contact support:\n"
+            "💬 m.me/lark.abalunan.1"
+        )
+        return await show_reseller_patch_menu(sender_psid, user_lang, state)
+
     # ROUTE ACTIONS
     if action == 'exit_menu':
         state_manager.clear_user_state(sender_psid)
@@ -154,7 +206,7 @@ async def handle_reseller_patch_choice(sender_psid: str, text: str, user_lang: s
     elif action == 'switch_account':
         replies = [{"title": "⬅️ Back", "payload": "patch_again"}]
         await messenger_api.send_quick_replies(sender_psid, "📧 Enter the target CarX Street account Email:\n\n👉 Type 'Menu' to return.", replies)
-        state_manager.set_user_state(sender_psid, 'awaiting_reseller_target_email', license_key=state['license_key'], lang=user_lang)
+        state_manager.set_user_state(sender_psid, 'awaiting_reseller_target_email', license_key=state['license_key'], license_tier=tier, lang=user_lang)
         
     elif action == 'custom':
         replies = [{"title": "Skip ➡️", "payload": "skip_silver"}]
@@ -264,11 +316,9 @@ async def handle_reseller_custom_xp(sender_psid: str, text: str, user_lang: str)
         except ValueError:
             return await messenger_api.send_text(sender_psid, "❌ Please enter a valid integer for XP:\n\n👉 Type 'skip' to skip.")
         
-    # Validation Check: If all Silver, Gold, and XP are skipped (all are 0), cancel the patch and loop back to menu
     if state.get('silver_val', 0.0) == 0.0 and state.get('gold_val', 0) == 0 and xp == 0:
         await messenger_api.send_text(sender_psid, "⚠️ All resources skipped. Patch cancelled.")
         
-        # Clean custom form data from the state dictionary
         state.pop("silver_val", None)
         state.pop("gold_val", None)
         state.pop("state", None)
@@ -340,7 +390,6 @@ async def handle_reseller_nitro_choice(sender_psid: str, text: str, user_lang: s
             await messenger_api.send_text(sender_psid, f"❌ Failed to load garage: {e}")
             await show_reseller_patch_menu(sender_psid, user_lang, state)
     else:
-        # Cancel / Fallback back to menu
         await show_reseller_patch_menu(sender_psid, user_lang, state)
 
 async def handle_reseller_single_nitro_id(sender_psid: str, text: str, user_lang: str):
@@ -398,36 +447,28 @@ async def execute_reseller_patch_task(
         async with httpx.AsyncClient(http2=True, timeout=60.0) as client:
             client.headers.update({"User-Agent": "UnityPlayer/6000.0.64f1", "X-Project": "STREET"})
             
-            # 1. Fetch target account profile
             cont, h = await get_profile_injector(client, email, password, dev_id, carx="", is_target=False)
             profile = decrypt_payload(cont["compressed_data"])
-            
-            # 2. Locate Garage
             garage = profile["cars"]["items"] if ("cars" in profile and "items" in profile["cars"]) else profile
             
             summary_actions = []
-
-            # 3. Process Mod Requests (Preserving all original dict structures in-place)
             res = profile.get("resources", {})
             if "experience" not in res or not isinstance(res["experience"], dict):
                 res["experience"] = {"amount": 0}
             current_xp = res["experience"].get("amount", 0)
             
-            # --- Modification: Ban Safe Pack 1 (10M Silver + 6k Gold) ---
             if action == 'safe_1':
                 res.setdefault("soft", {"amount": 0.0})["amount"] += 10000000.0
                 res.setdefault("hard", {"amount": 0})["amount"] += 6000
                 profile["resources"] = res
                 summary_actions.append("💰 Applied Ban-Safe Pack 1 (+10M Silver, +6k Gold)")
 
-            # --- Modification: Ban Safe Pack 2 (6M Silver + 1k Gold) ---
             elif action == 'safe_2':
                 res.setdefault("soft", {"amount": 0.0})["amount"] += 6000000.0
                 res.setdefault("hard", {"amount": 0})["amount"] += 1000
                 profile["resources"] = res
                 summary_actions.append("💰 Applied Ban-Safe Pack 2 (+6M Silver, +1k Gold)")
 
-            # --- Modification: Custom Input Values ---
             elif action == 'custom':
                 if custom_silver:
                     res.setdefault("soft", {"amount": 0.0})["amount"] += float(custom_silver)
@@ -438,7 +479,6 @@ async def execute_reseller_patch_task(
                 profile["resources"] = res
                 summary_actions.append(f"💰 Custom Resources added: +{custom_silver:,.0f} Silver, +{custom_gold:,} Gold, +{custom_xp:,} XP")
 
-            # --- Modification: Max Nitro (All cars) ---
             elif action in ['nitro', 'nitro_all']:
                 owned_cars = [k for k in garage.keys() if k.isdigit() and isinstance(garage[k], dict)]
                 if owned_cars:
@@ -451,7 +491,6 @@ async def execute_reseller_patch_task(
                         nitro["amount"] = 20000000
                     summary_actions.append(f"⚡ Maxed Nitro on {len(owned_cars)} car(s)")
 
-            # --- Modification: Max Nitro (Single selective car) ---
             elif action == 'nitro_single':
                 if target_car_id in garage:
                     current_timestamp = int(time.time())
@@ -463,7 +502,6 @@ async def execute_reseller_patch_task(
                     car_name = garage[target_car_id].get("__desc_id", f"Car {target_car_id}")
                     summary_actions.append(f"⚡ Maxed Nitro on specific Car: {car_name} (ID: {target_car_id})")
 
-            # --- Modification: Map Region Unlocker ---
             elif action == 'maps':
                 world_parts = profile.setdefault("game_world_parts", {})
                 quests = profile.setdefault("quests", {})
@@ -482,7 +520,6 @@ async def execute_reseller_patch_task(
                     quest_node["rewarded"] = True
                 summary_actions.append("🗺️ Unlocked all map regions and bypassed quests")
 
-            # --- Modification: Inject Custom Car ---
             elif action == 'inject_car':
                 car_db, _ = await load_db_data_async()
                 existing_keys = sorted([int(k) for k in garage.keys() if k.isdigit()])
@@ -495,18 +532,14 @@ async def execute_reseller_patch_task(
                 car_name = car_db[target_car_id].get("__desc_id", f"Car {target_car_id}")
                 summary_actions.append(f"🚗 Injected untouched {car_name} (ID: {target_car_id}) into garage slot {last_id}")
 
-            # 4. Strictly synchronize internal lastSyncTime (matches original script!)
             current_time = int(time.time())
             profile["lastSyncTime"] = current_time
-
-            # 5. Securely Encrypt and Upload back to CarX Server
             cont["compressed_data"] = encrypt_payload_strict_local(profile)
             
             r_up = await client.post(f"{BASE_SYNC}/profiles", json=cont, headers=h)
             if r_up.status_code != 200:
                 raise Exception(f"Upload rejected by CarX sync server: {r_up.text}")
                 
-            # 6. Success delivery notification
             success_msg = (
                 "🎉 *PATCHING COMPLETED SUCCESSFULLY!* 🎉\n\n"
                 f"📧 Account: `{email}`\n"
@@ -514,8 +547,6 @@ async def execute_reseller_patch_task(
                 "Please restart your game completely to view changes! Enjoy! 🔥"
             )
             await messenger_api.send_text(user_psid, success_msg)
-            
-            # --- PERSISTENCE: Loop reseller menu back on completion automatically ---
             await show_reseller_patch_menu(user_psid, user_lang, state_data)
             
     except Exception as e:
@@ -526,6 +557,4 @@ async def execute_reseller_patch_task(
             "Please double check your credentials and try again."
         )
         await messenger_api.send_text(user_psid, fail_msg)
-        
-        # Loop back to menu even on fail
         await show_reseller_patch_menu(user_psid, user_lang, state_data)
