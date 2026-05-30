@@ -1,3 +1,4 @@
+# admin/operations.py
 import asyncio
 import database as db
 import state_manager
@@ -260,8 +261,10 @@ async def show_license_submenu(sender_psid: str):
 async def prompt_create_license(sender_psid: str):
     msg = (
         "Provide license details in this exact format:\n"
-        "🔑 *[Key], [Days], [User Name]*\n\n"
-        "Example: `KEY-VIP-99, 30, John Doe`"
+        "🔑 *[Key], [Days], [User Name], [Tier]*\n\n"
+        "Tiers: `free` or `premium` (defaults to premium if left blank).\n\n"
+        "Example: `KEY-VIP-99, 30, John Doe, premium`\n"
+        "Example: `KEY-FREE-99, 30, Jane Doe, free`"
     )
     await messenger_api.send_text(sender_psid, msg)
     state_manager.set_user_state(sender_psid, 'awaiting_create_license_details')
@@ -275,11 +278,19 @@ async def process_create_license(sender_psid: str, text: str):
         key_input = parts[0]
         days_input = int(parts[1])
         name_input = parts[2]
+        tier_input = parts[3].lower() if len(parts) > 3 else 'premium'
         
-        await db.add_license_key(key_input, days_input, name_input)
-        await messenger_api.send_text(sender_psid, f"✅ License Key `{key_input}` generated successfully for {name_input} ({days_input} Days).")
+        if tier_input not in ['free', 'premium']:
+            tier_input = 'premium'
+        
+        await db.add_license_key(key_input, days_input, name_input, tier_input)
+        await messenger_api.send_text(
+            sender_psid, 
+            f"✅ License Key `{key_input}` generated successfully for {name_input} "
+            f"({days_input} Days) under [{tier_input.upper()}] tier."
+        )
     except Exception as e:
-        await messenger_api.send_text(sender_psid, f"❌ Format error. Use: Key, Days, Name. Details: {e}")
+        await messenger_api.send_text(sender_psid, f"❌ Format error. Use: Key, Days, Name, Tier. Details: {e}")
     finally:
         state_manager.clear_user_state(sender_psid)
 
@@ -292,10 +303,12 @@ async def handle_view_licenses(sender_psid: str):
     for lic in licenses:
         days_left = math.ceil(lic['days_remaining']) if lic['days_remaining'] > 0 else 0
         status_emoji = "🟢 Active" if (lic['is_active'] and days_left > 0) else "🔴 Expired"
+        tier_label = lic.get('tier', 'premium').upper()
         
         response += (
             f"👤 *Reseller:* {lic['assigned_to'] or 'Unknown'}\n"
             f"🔑 *Key:* `{lic['key']}`\n"
+            f"🏷️ *Tier:* `{tier_label}`\n"
             f"⏱️ *Remaining:* {days_left} Days ({status_emoji})\n"
             f"📅 *Expires:* {lic['expires_at'].strftime('%Y-%m-%d %H:%M')}\n\n"
         )
