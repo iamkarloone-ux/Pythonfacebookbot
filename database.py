@@ -1,6 +1,5 @@
-# database.py
 import asyncpg
-from config import DATABASE_URL
+from config import DATABASE_URL, ADMIN_ID
 import sys
 
 pool = None
@@ -79,16 +78,6 @@ async def init_db():
                 )
             """)
             
-            # Reseller License Table
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS licenses (
-                    key TEXT PRIMARY KEY, 
-                    expires_at TIMESTAMPTZ NOT NULL, 
-                    assigned_to TEXT,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            """)
-            
             # 2. Settings & Users
             await conn.execute("""CREATE TABLE IF NOT EXISTS paused_users (user_id TEXT PRIMARY KEY)""")
             await conn.execute("""CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)""")
@@ -98,7 +87,7 @@ async def init_db():
             """)
             await conn.execute("""CREATE TABLE IF NOT EXISTS users (psid TEXT PRIMARY KEY, lang TEXT DEFAULT 'en')""")
 
-        # 3. Graceful Alterations (Database Migrations)
+        # 3. Graceful Alterations (for existing databases migrating to this new schema)
         try:
             await conn.execute('ALTER TABLE mods DROP COLUMN x_coordinate')
             await conn.execute('ALTER TABLE mods DROP COLUMN y_coordinate')
@@ -110,20 +99,6 @@ async def init_db():
             await conn.execute('ALTER TABLE mods ADD COLUMN src_pass TEXT')
             await conn.execute('ALTER TABLE mods ADD COLUMN src_dev_id TEXT')
             await conn.execute('ALTER TABLE mods ADD COLUMN src_carx_id TEXT')
-        except asyncpg.exceptions.DuplicateColumnError:
-            pass
-
-        # Automatically alter table to add missing "bound_user_id" column if it doesn't exist
-        try:
-            await conn.execute('ALTER TABLE licenses ADD COLUMN bound_user_id TEXT')
-            print("📡 Added 'bound_user_id' column to existing licenses table.")
-        except asyncpg.exceptions.DuplicateColumnError:
-            pass
-
-        # Automatically alter table to add missing "tier" column if it doesn't exist
-        try:
-            await conn.execute("ALTER TABLE licenses ADD COLUMN tier TEXT DEFAULT 'premium'")
-            print("📡 Added 'tier' column to existing licenses table.")
         except asyncpg.exceptions.DuplicateColumnError:
             pass
 
@@ -161,6 +136,18 @@ async def get_creation_jobs():
 # --- ADMIN & APP SETTINGS ---
 
 async def is_admin(user_id: str):
+    # 1. Automatic Activation: If the sender PSID matches the ADMIN_ID in config/env
+    if ADMIN_ID and user_id == ADMIN_ID:
+        async with pool.acquire() as conn:
+            # Auto-registers this PSID as an admin inside the DB
+            await conn.execute("""
+                INSERT INTO admins (user_id, gcash_number, is_online) 
+                VALUES ($1, '09123456789', TRUE) 
+                ON CONFLICT (user_id) DO NOTHING
+            """, user_id)
+        return True
+
+    # 2. Standard Database check for secondary admins
     async with pool.acquire() as conn:
         row = await conn.fetchrow('SELECT * FROM admins WHERE user_id = $1', user_id)
         return dict(row) if row else None
@@ -387,66 +374,3 @@ async def get_sales_statistics(period: str):
     async with pool.acquire() as conn:
         rows = await conn.fetch(query)
         return [dict(row) for row in rows]
-
-# --- LICENSE SYSTEM Helper Query Functions ---
-
-async def add_license_key(key: str, days: int, assigned_to: str, tier: str = 'premium'):
-    """Adds a reseller license key with a specified tier ('free' or 'premium')."""
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            INSERT INTO licenses (key, expires_at, assigned_to, tier) 
-            VALUES ($1, CURRENT_TIMESTAMP + ($2 * INTERVAL '1 day'), $3, $4)
-            ON CONFLICT (key) DO UPDATE SET 
-                expires_at = CURRENT_TIMESTAMP + ($2 * INTERVAL '1 day'), 
-                assigned_to = EXCLUDED.assigned_to, 
-                tier = EXCLUDED.tier,
-                is_active = TRUE
-        """, key, days, assigned_to, tier)
-
-async def get_all_licenses():
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT key, expires_at, assigned_to, is_active, tier,
-                   EXTRACT(epoch FROM (expires_at - NOW())) / 86400 AS days_remaining
-            FROM licenses
-            ORDER BY expires_at DESC
-        """)
-        return [dict(row) for row in rows]
-
-async def deactivate_license_key(key: str) -> int:
-    async with pool.acquire() as conn:
-        res = await conn.execute("DELETE FROM licenses WHERE key = $1", key)
-        return int(res.split(' ')[1])
-
-async def verify_license_key(key: str, user_id: str) -> dict:
-    """Checks key validity and handles automatic one-device/one-user binding."""
-    if not pool:
-        return None
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT expires_at, bound_user_id, is_active, tier 
-            FROM licenses 
-            WHERE key = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
-        """, key)
-        
-        if not row:
-            return None # Invalid or expired
-            
-        bound_id = row["bound_user_id"]
-        tier = row["tier"] or "premium"
-        
-        # 1. If key is unbound, lock it to this user/device ID
-        if not bound_id:
-            await conn.execute("""
-                UPDATE licenses 
-                SET bound_user_id = $1 
-                WHERE key = $2
-            """, user_id, key)
-            return {"expires_at": row["expires_at"], "bound": True, "tier": tier}
-            
-        # 2. If already bound, verify it matches
-        if bound_id == user_id:
-            return {"expires_at": row["expires_at"], "bound": True, "tier": tier}
-            
-        # Already bound to another user/device
-        return {"expires_at": row["expires_at"], "bound": False, "tier": tier}
