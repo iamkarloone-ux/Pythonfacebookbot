@@ -3,7 +3,7 @@ import os
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN", "")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "pinkGuineaFowl_onpella_2025")
-ADMIN_ID = os.getenv("ADMIN_ID", "9022271741140377")
+ADMIN_ID = os.getenv("ADMIN_ID", "122336463752")
 WORKER_SECRET_TOKEN = os.getenv("WORKER_SECRET_TOKEN", "")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 PYTHONUNBUFFERED = os.getenv("PYTHONUNBUFFERED", "1")
